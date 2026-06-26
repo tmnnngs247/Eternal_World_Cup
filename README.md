@@ -1,34 +1,44 @@
 # The Eternal World Cup
 
-Using neural-network football DNA to identify the modern successors to football's greats.
+Using neural-network-style football DNA to identify modern successors to football's greats.
 
-## What this app does
+This repository is now structured as a small ML/data product rather than a single Streamlit file.
+The Streamlit app reads clean files from `data/processed/`; reproducible data and modelling scripts live in `src/`.
 
-This Streamlit app explores player similarity using neural embeddings built from FIFA-style player attributes and FBRef-style performance data.
+## Repository structure
 
-Core features:
+```text
+Eternal_World_Cup/
+  app.py                    # Streamlit entrypoint
+  app/                      # UI components and CSS
+  src/                      # data/model pipeline
+  data/raw/                 # raw datasets kept locally
+  data/processed/           # app-ready outputs
+  outputs/                  # fitted models / artifacts
+  requirements.txt
+```
 
-- Find modern successors for any player-season
-- Compare two players by football DNA similarity
-- Rank current players by a prototype Legend Style Score
-- Explore a 2D Football DNA map
-- Review archetype clusters and model caveats
-
-## How to run locally
+## Running locally
 
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## How to deploy
+## Rebuilding the data pipeline
 
-1. Upload this whole folder to GitHub.
-2. Go to Streamlit Community Cloud.
-3. Choose this repository.
-4. Set the main file path to `app.py`.
-5. Deploy.
+Place the raw CSVs in `data/raw/`, then run:
 
-## Data caveats
+```bash
+python src/data_build.py
+python src/train_embeddings.py
+python src/similarity.py
+python src/archetypes.py
+python src/legend_score.py
+```
 
-The model is exploratory. Similarity means profile similarity, not equal quality. FIFA 26 records are useful for current-player comparison, but true 25/26 FBRef production should be added when available.
+The app will use the generated files in `data/processed/`.
+
+## Caveat
+
+The current Legend Style Score is exploratory. It is intended as a storytelling layer, not a validated prediction model.

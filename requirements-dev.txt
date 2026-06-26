@@ -1,0 +1,6 @@
+-r requirements.txt
+jupyter
+matplotlib
+pytest
+# Optional for neural autoencoder training:
+# torch
