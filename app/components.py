@@ -61,6 +61,7 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
         overall = r.get("overall", r.get("ovr", ""))
         sim = r.get("similarity", None)
         score = f"{sim*100:.1f}%" if pd.notna(sim) else ""
+        why = html.escape(str(r.get("why_similar", "") or ""))
         cards.append(
             f"""
             <article class="ewc-player-card">
@@ -75,6 +76,7 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
               <span class="ewc-pill">Overall {overall}</span>
               <span class="ewc-pill">Age {html.escape(str(r.get('age', '')))}</span>
               <span class="ewc-pill">Cluster {html.escape(str(r.get('archetype_id', '')))}</span>
+            <div class="ewc-player-meta" style="margin-top:.75rem;">{why}</div>
             </article>
             """
         )

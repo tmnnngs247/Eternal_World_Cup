@@ -49,3 +49,21 @@ def inject_css() -> None:
     @media (max-width: 560px) { .metric-grid { grid-template-columns: 1fr; } }
     </style>
     """, unsafe_allow_html=True)
+
+    /* Improve Streamlit dropdown/select contrast */
+div[data-baseweb="select"] > div {
+  background-color: #f3f6fb !important;
+  color: #111827 !important;
+}
+
+div[data-baseweb="select"] span {
+  color: #111827 !important;
+}
+
+div[data-baseweb="popover"] {
+  color: #111827 !important;
+}
+
+ul[role="listbox"] li {
+  color: #111827 !important;
+}
