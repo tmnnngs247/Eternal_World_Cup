@@ -1,0 +1,46 @@
+# -------------------------
+# Python
+# -------------------------
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# -------------------------
+# Raw data (never commit)
+# -------------------------
+data/raw/*
+!data/raw/.gitkeep
+
+# -------------------------
+# Generated outputs
+# -------------------------
+data/processed/*
+!data/processed/.gitkeep
+
+outputs/*
+!outputs/.gitkeep
+
+# Models
+*.pkl
+*.joblib
+*.h5
+
+# Large CSVs
+*.parquet
