@@ -17,7 +17,7 @@ load_css()
 
 @st.cache_data
 def load_players() -> pd.DataFrame:
-    path = PROCESSED / "player_embeddings.csv"
+    path = PROCESSED / "app_players.csv"
     if not path.exists():
         st.error("Processed data not found. Run `python src/run_pipeline.py` locally and commit data/processed outputs.")
         st.stop()
