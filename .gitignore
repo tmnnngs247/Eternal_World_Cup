@@ -31,8 +31,6 @@ data/raw/*
 # -------------------------
 # Generated outputs
 # -------------------------
-data/processed/*
-!data/processed/.gitkeep
 
 outputs/*
 !outputs/.gitkeep
