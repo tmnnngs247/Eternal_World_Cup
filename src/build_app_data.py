@@ -6,6 +6,28 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 PROCESSED = ROOT / "data" / "processed"
 
+COUNTRY_FLAGS = {
+    "Argentina": "🇦🇷",
+    "Brazil": "🇧🇷",
+    "England": "🏴",
+    "France": "🇫🇷",
+    "Germany": "🇩🇪",
+    "Spain": "🇪🇸",
+    "Portugal": "🇵🇹",
+    "Netherlands": "🇳🇱",
+    "Belgium": "🇧🇪",
+    "Italy": "🇮🇹",
+    "Croatia": "🇭🇷",
+    "Uruguay": "🇺🇾",
+    "Norway": "🇳🇴",
+    "Poland": "🇵🇱",
+    "Morocco": "🇲🇦",
+    "Japan": "🇯🇵",
+    "South Korea": "🇰🇷",
+    "United States": "🇺🇸",
+    "Mexico": "🇲🇽",
+}
+
 KEEP_COLS = [
     "player_season_id", "name_key", "short_name", "long_name",
     "season_year", "season_label", "club_name", "league_name",
@@ -22,13 +44,24 @@ def main() -> None:
 
     app_players = players[keep].copy()
 
-    # keep all latest player-seasons + top historical player-seasons
     latest = app_players.sort_values("season_year").groupby("name_key", as_index=False).tail(1)
     historical_top = app_players.sort_values("overall", ascending=False).head(25000)
 
     app_players = (
         pd.concat([latest, historical_top], ignore_index=True)
         .drop_duplicates("player_season_id")
+    )
+
+    if "flag" not in app_players.columns:
+        app_players["flag"] = ""
+
+    app_players["flag"] = app_players["flag"].fillna("")
+    missing_flag = app_players["flag"].eq("")
+
+    app_players.loc[missing_flag, "flag"] = (
+        app_players.loc[missing_flag, "nationality_name"]
+        .map(COUNTRY_FLAGS)
+        .fillna("")
     )
 
     app_players.to_csv(PROCESSED / "app_players.csv", index=False)
