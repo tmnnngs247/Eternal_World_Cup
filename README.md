@@ -1,44 +1,27 @@
 # The Eternal World Cup
 
-Using neural-network-style football DNA to identify modern successors to football's greats.
+Using player attributes, performance-style data and neural-style football DNA embeddings to explore player similarity, successors, archetypes and World Cup storytelling.
 
-This repository is now structured as a small ML/data product rather than a single Streamlit file.
-The Streamlit app reads clean files from `data/processed/`; reproducible data and modelling scripts live in `src/`.
+## App entry point
 
-## Repository structure
+Streamlit Community Cloud should run:
 
 ```text
-Eternal_World_Cup/
-  app.py                    # Streamlit entrypoint
-  app/                      # UI components and CSS
-  src/                      # data/model pipeline
-  data/raw/                 # raw datasets kept locally
-  data/processed/           # app-ready outputs
-  outputs/                  # fitted models / artifacts
-  requirements.txt
+app.py
 ```
 
-## Running locally
+## Project structure
 
-```bash
-pip install -r requirements.txt
-streamlit run app.py
+```text
+app.py                  # Streamlit entry point
+app/                    # UI helpers and styles
+src/                    # Reproducible data/model pipeline
+data/processed/         # App-ready outputs
+models/                 # Saved model metadata
 ```
 
-## Rebuilding the data pipeline
+## Current build
 
-Place the raw CSVs in `data/raw/`, then run:
+This version is a stable foundation. It uses a reproducible PCA embedding pipeline over FIFA/FBRef-style numerical player features, clusters players into 24 archetypes, calculates nearest-neighbour similarity in embedding space, and enriches player cards with World Cup roster metadata and flags where available.
 
-```bash
-python src/data_build.py
-python src/train_embeddings.py
-python src/similarity.py
-python src/archetypes.py
-python src/legend_score.py
-```
-
-The app will use the generated files in `data/processed/`.
-
-## Caveat
-
-The current Legend Style Score is exploratory. It is intended as a storytelling layer, not a validated prediction model.
+The next upgrade is to replace/extend the PCA embedding with a trained autoencoder once the data pipeline is fully stable.

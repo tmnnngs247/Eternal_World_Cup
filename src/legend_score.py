@@ -1,43 +1,35 @@
-"""Prototype Legend Style Score.
-
-This is deliberately labelled exploratory. It combines peak rating, potential, reputation,
-current age curve and similarity-space prominence. Replace with a supervised model once a
-proper historical legend label is defined.
-"""
 from __future__ import annotations
 
+from pathlib import Path
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
 
-from config import PROCESSED_DIR
-
-
-def minmax(s: pd.Series) -> pd.Series:
-    s = pd.to_numeric(s, errors="coerce")
-    if s.max() == s.min():
-        return pd.Series(0.5, index=s.index)
-    return (s - s.min()) / (s.max() - s.min())
+ROOT = Path(__file__).resolve().parents[1]
+PROCESSED = ROOT / "data" / "processed"
 
 
-def main() -> None:
-    df = pd.read_csv(PROCESSED_DIR / "player_embeddings.csv", low_memory=False)
-    current = df[df["season_year"].eq(df["season_year"].max())].copy() if "season_year" in df.columns else df.copy()
-    current["age_curve_bonus"] = np.select(
-        [current["age"].between(16, 23, inclusive="both"), current["age"].between(24, 29, inclusive="both")],
-        [1.0, 0.75], default=0.35
-    ) if "age" in current.columns else 0.5
-    score = (
-        0.40 * minmax(current.get("overall", 0))
-        + 0.25 * minmax(current.get("potential", current.get("overall", 0)))
-        + 0.15 * minmax(current.get("international_reputation", 1))
-        + 0.10 * current["age_curve_bonus"]
-        + 0.10 * minmax(current.get("value_eur", 0))
+def main():
+    df = pd.read_csv(PROCESSED / "player_embeddings.csv")
+    latest = df.sort_values("season_year").groupby("name_key", as_index=False).tail(1).copy()
+    for c in ["overall", "potential", "age", "international_reputation", "wc_apps", "wc_goals"]:
+        if c not in latest.columns:
+            latest[c] = 0
+        latest[c] = pd.to_numeric(latest[c], errors="coerce").fillna(0)
+    # Prototype narrative score: current quality + ceiling + youth + World Cup signal.
+    age_bonus = np.clip((30 - latest["age"]) / 12, 0, 1) * 100
+    raw = (
+        latest["overall"].fillna(0) * 0.45 +
+        latest["potential"].fillna(latest["overall"]) * 0.25 +
+        age_bonus * 0.15 +
+        latest["international_reputation"].fillna(0) * 6 +
+        np.log1p(latest["wc_apps"].fillna(0)) * 6 +
+        np.log1p(latest["wc_goals"].fillna(0)) * 7
     )
-    current["legend_style_score"] = (100 * score).round(1)
-    keep = [c for c in ["short_name", "long_name", "age", "club_name", "nationality_name", "player_positions", "overall", "potential", "legend_style_score", "player_face_url"] if c in current.columns]
-    out = current[keep].sort_values("legend_style_score", ascending=False).head(500)
-    out.to_csv(PROCESSED_DIR / "legend_scores.csv", index=False)
-    print(f"Wrote legend scores: {out.shape}")
+    scaler = MinMaxScaler(feature_range=(0, 100))
+    latest["legend_style_score"] = scaler.fit_transform(raw.to_numpy().reshape(-1,1)).ravel().round(1)
+    latest.sort_values("legend_style_score", ascending=False).to_csv(PROCESSED / "legend_scores.csv", index=False)
+    print("Built legend_scores.csv")
 
 if __name__ == "__main__":
     main()
