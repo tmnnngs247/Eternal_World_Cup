@@ -1,25 +1,11 @@
-archetype_cluster,archetype_label,players,avg_overall,avg_age,dominant_role
-13,Inside Forward 2,3495,57.8,21.3,W
-1,Touchline Winger,3079,76.2,26.7,W
-2,Inside Forward,3054,62.5,22.4,W
-16,Attacking Wingback,3043,77.2,26.2,FB
-5,Wide Playmaker,2712,74.2,25.4,W
-20,Wide Playmaker 2,2355,67.1,23.3,W
-14,Aerial Stopper,2163,64.9,28.1,CB
-6,Shot Stopper,2068,73.8,28.0,GK
-8,Aggressive Centre Back,2026,76.0,26.6,CB
-11,Tempo Controller,2005,71.1,25.7,CM
-10,Touchline Winger 2,1814,77.9,26.3,W
-12,Pressing Forward,1800,72.1,26.0,ST
-15,Ball-Carrying Creator 2,1701,70.6,29.8,W
-22,Touchline Winger 3,1658,66.1,29.6,W
-23,Inside Forward 3,1643,70.2,23.7,W
-19,Defensive Fullback,1634,68.4,23.8,FB
-21,Ball-Playing Centre Back 2,1583,70.9,27.0,CB
-0,Ball-Playing Centre Back,1485,70.9,26.0,CB
-9,Box Striker,1393,69.4,25.2,ST
-17,Covering Defender,1390,69.3,26.2,CB
-3,Sweeper Keeper,1335,68.7,29.0,GK
-4,Ball-Carrying Creator,1253,68.3,23.6,W
-7,Modern Fullback,1160,69.0,24.3,FB
-18,Development Keeper,992,57.9,22.8,GK
+archetype_cluster,archetype_label,players,avg_overall,avg_age
+5,Balanced all-rounders,5965,59.515842414082144,22.18105616093881
+0,Ball-carrying creators,5572,74.42893036611629,25.213388370423548
+2,Balanced all-rounders,5031,74.4293381037567,27.305505863645397
+8,Balanced all-rounders,4950,75.48464646464646,26.083838383838383
+9,Balanced all-rounders,4801,72.5409289731306,26.267652572380754
+1,Balanced all-rounders,4567,66.098532953799,24.470768557039634
+4,Goalkeepers,4387,68.69637565534534,27.12331889674037
+7,Balanced all-rounders,4083,67.27994121969141,28.432280186137643
+6,Balanced all-rounders,3809,70.59936991336309,25.192964032554475
+3,Balanced all-rounders,3676,68.40043525571274,24.129216539717085

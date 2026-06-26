@@ -7,7 +7,7 @@ import plotly.express as px
 import streamlit as st
 from sklearn.metrics.pairwise import cosine_similarity
 
-from app.components import hero, load_css, metrics_grid, player_cards
+from components import hero, load_css, metrics_grid, player_cards
 
 ROOT = Path(__file__).parent
 PROCESSED = ROOT / "data" / "processed"
