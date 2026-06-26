@@ -1,0 +1,73 @@
+legend_query,legend_season,similarity,season_label,short_name,long_name,age,player_positions,overall,potential,club_name,nationality_name,archetype_label
+L. Messi,FIFA 19,0.99726564,FIFA 25,Dani Olmo,Daniel Olmo Carvajal,26,CAM,85,86,FC Barcelona,Spain,Ball-carrying creators
+L. Messi,FIFA 19,0.9961983,FIFA 25,Cole Palmer,Cole Jermaine Palmer,22,RM,87,90,Chelsea,England,Ball-carrying creators
+L. Messi,FIFA 19,0.9940203,FIFA 25,Mason Greenwood,Mason Will John Greenwood,23,RM,82,86,Olympique de Marseille,England,Ball-carrying creators
+L. Messi,FIFA 19,0.99362475,FIFA 25,Khvicha Kvaratskhelia,Khvicha Kvaratskheliaხვიჩა კვარაცხელია,23,LW,85,89,Paris Saint-Germain,Georgia,Ball-carrying creators
+L. Messi,FIFA 19,0.99253523,FIFA 25,Florian Wirtz,Florian Richard Wirtz,21,CAM,89,92,Bayer 04 Leverkusen,Germany,Ball-carrying creators
+L. Messi,FIFA 19,0.99192804,FIFA 25,Rafael Leao,Rafael Alexandre da Conceicao Leao,25,LW,85,88,AC Milan,Portugal,Ball-carrying creators
+L. Messi,FIFA 19,0.9912496,FIFA 25,Vini Jr.,Vinicius Jose Paixao de Oliveira Junior,24,LW,90,94,Real Madrid,Brazil,Ball-carrying creators
+L. Messi,FIFA 19,0.9909065,FIFA 25,Xavi Simons,Xavier Quentin Shay Simons,21,CAM,84,89,RB Leipzig,Netherlands,Ball-carrying creators
+Cristiano Ronaldo,FIFA 19,0.997535,FIFA 25,Kylian Mbappe,Kylian Mbappe Lottin,25,ST,90,93,Real Madrid,France,Ball-carrying creators
+Cristiano Ronaldo,FIFA 19,0.99253047,FIFA 25,Vini Jr.,Vinicius Jose Paixao de Oliveira Junior,24,LW,90,94,Real Madrid,Brazil,Ball-carrying creators
+Cristiano Ronaldo,FIFA 19,0.9905423,FIFA 25,Alexander Isak,Alexander Isak,25,ST,86,88,Newcastle United,Sweden,Ball-carrying creators
+Cristiano Ronaldo,FIFA 19,0.98922646,FIFA 25,Rafael Leao,Rafael Alexandre da Conceicao Leao,25,LW,85,88,AC Milan,Portugal,Ball-carrying creators
+Cristiano Ronaldo,FIFA 19,0.9888154,FIFA 25,Cole Palmer,Cole Jermaine Palmer,22,RM,87,90,Chelsea,England,Ball-carrying creators
+Cristiano Ronaldo,FIFA 19,0.9855795,FIFA 25,Dani Olmo,Daniel Olmo Carvajal,26,CAM,85,86,FC Barcelona,Spain,Ball-carrying creators
+Cristiano Ronaldo,FIFA 19,0.9855424,FIFA 25,Sancet,Oihan Sancet Tirapu,24,CAM,83,88,Athletic Club,Spain,Ball-carrying creators
+Cristiano Ronaldo,FIFA 19,0.9849433,FIFA 25,Jonathan David,Jonathan Christian David,24,ST,82,85,Lille OSC,Canada,Ball-carrying creators
+L. Modric,FIFA 19,0.9956571,FIFA 25,Declan Rice,Declan Rice,25,CDM,87,88,Arsenal,England,Balanced all-rounders
+L. Modric,FIFA 19,0.9941648,FIFA 25,Pedri,Pedro Gonzalez Lopez,21,CM,87,90,FC Barcelona,Spain,Balanced all-rounders
+L. Modric,FIFA 19,0.9913375,FIFA 25,Teun Koopmeiners,Teun Koopmeiners,26,CM,82,83,Juventus,Netherlands,Ball-carrying creators
+L. Modric,FIFA 19,0.99096406,FIFA 25,Sandro Tonali,Sandro Tonali,24,CDM,85,87,Newcastle United,Italy,Balanced all-rounders
+L. Modric,FIFA 19,0.98883283,FIFA 25,Curtis Jones,Curtis Jones,23,CM,80,83,Liverpool,England,Balanced all-rounders
+L. Modric,FIFA 19,0.98833394,FIFA 25,Achraf Hakimi,Achraf Hakimi Mouh,26,RB,86,88,Paris Saint-Germain,Morocco,Balanced all-rounders
+L. Modric,FIFA 19,0.988194,FIFA 25,Federico Valverde,Federico Santiago Valverde Dipetta,26,CM,88,91,Real Madrid,Uruguay,Balanced all-rounders
+L. Modric,FIFA 19,0.988062,FIFA 25,Enzo Fernandez,Enzo Jeremias Fernandez,23,CM,83,87,Chelsea,Argentina,Balanced all-rounders
+K. De Bruyne,FIFA 24,0.9933057,FIFA 25,Hakon Arnar Haraldsson,Hakon Arnar Haraldsson,21,LM,77,83,Lille OSC,Iceland,Ball-carrying creators
+K. De Bruyne,FIFA 24,0.99082196,FIFA 25,Bukayo Saka,Bukayo Saka,23,RW,88,90,Arsenal,England,Ball-carrying creators
+K. De Bruyne,FIFA 24,0.9900621,FIFA 25,Xavi Simons,Xavier Quentin Shay Simons,21,CAM,84,89,RB Leipzig,Netherlands,Ball-carrying creators
+K. De Bruyne,FIFA 24,0.98992336,FIFA 25,Lee Kang In,Kang-in Lee,23,CAM,79,84,Paris Saint-Germain,Korea Republic,Balanced all-rounders
+K. De Bruyne,FIFA 24,0.9895203,FIFA 25,Rayan Cherki,Mathis Rayan Cherki,21,CAM,79,88,Olympique Lyonnais,France,Ball-carrying creators
+K. De Bruyne,FIFA 24,0.9893581,FIFA 25,Michael Olise,Michael Akpovie Olise,22,RM,85,88,FC Bayern München,France,Ball-carrying creators
+K. De Bruyne,FIFA 24,0.98921907,FIFA 25,Dominik Szoboszlai,Dominik Szoboszlai,24,CAM,82,86,Liverpool,Hungary,Ball-carrying creators
+K. De Bruyne,FIFA 24,0.98844284,FIFA 25,Matias Soule,Matias Soule Malvano,21,RM,76,85,Roma,Argentina,Ball-carrying creators
+Neymar Jr,FIFA 19,0.9951643,FIFA 25,Dani Olmo,Daniel Olmo Carvajal,26,CAM,85,86,FC Barcelona,Spain,Ball-carrying creators
+Neymar Jr,FIFA 19,0.9938927,FIFA 25,Cole Palmer,Cole Jermaine Palmer,22,RM,87,90,Chelsea,England,Ball-carrying creators
+Neymar Jr,FIFA 19,0.993615,FIFA 25,Florian Wirtz,Florian Richard Wirtz,21,CAM,89,92,Bayer 04 Leverkusen,Germany,Ball-carrying creators
+Neymar Jr,FIFA 19,0.99328953,FIFA 25,Mason Greenwood,Mason Will John Greenwood,23,RM,82,86,Olympique de Marseille,England,Ball-carrying creators
+Neymar Jr,FIFA 19,0.9931297,FIFA 25,Khvicha Kvaratskhelia,Khvicha Kvaratskheliaხვიჩა კვარაცხელია,23,LW,85,89,Paris Saint-Germain,Georgia,Ball-carrying creators
+Neymar Jr,FIFA 19,0.9928626,FIFA 25,Michael Olise,Michael Akpovie Olise,22,RM,85,88,FC Bayern München,France,Ball-carrying creators
+Neymar Jr,FIFA 19,0.99284816,FIFA 25,Xavi Simons,Xavier Quentin Shay Simons,21,CAM,84,89,RB Leipzig,Netherlands,Ball-carrying creators
+Neymar Jr,FIFA 19,0.9926836,FIFA 25,Bukayo Saka,Bukayo Saka,23,RW,88,90,Arsenal,England,Ball-carrying creators
+T. Kroos,FIFA 18,0.9966726,FIFA 25,Pedri,Pedro Gonzalez Lopez,21,CM,87,90,FC Barcelona,Spain,Balanced all-rounders
+T. Kroos,FIFA 18,0.99191236,FIFA 25,Achraf Hakimi,Achraf Hakimi Mouh,26,RB,86,88,Paris Saint-Germain,Morocco,Balanced all-rounders
+T. Kroos,FIFA 18,0.9911529,FIFA 25,Vitinha,Vitor Machado Ferreira,24,ST,85,89,Paris Saint-Germain,Portugal,Balanced all-rounders
+T. Kroos,FIFA 18,0.99081665,FIFA 25,Vitinha,Vitor Machado Ferreira,24,CM,85,89,Paris Saint-Germain,Portugal,Balanced all-rounders
+T. Kroos,FIFA 18,0.9906274,FIFA 25,Trent Alexander-Arnold,Trent John Alexander-Arnold,26,RB,86,87,Liverpool,England,Balanced all-rounders
+T. Kroos,FIFA 18,0.9904452,FIFA 25,Enzo Fernandez,Enzo Jeremias Fernandez,23,CM,83,87,Chelsea,Argentina,Balanced all-rounders
+T. Kroos,FIFA 18,0.9893869,FIFA 25,Nuno Mendes,Nuno Alexandre Tavares Mendes,22,LB,83,87,Paris Saint-Germain,Portugal,Balanced all-rounders
+T. Kroos,FIFA 18,0.9886104,FIFA 25,Exequiel Palacios,Exequiel Alejandro Palacios,26,CM,84,87,Bayer 04 Leverkusen,Argentina,Balanced all-rounders
+R. Lewandowski,FIFA 22,0.99607855,FIFA 25,Sancet,Oihan Sancet Tirapu,24,CAM,83,88,Athletic Club,Spain,Ball-carrying creators
+R. Lewandowski,FIFA 22,0.99518055,FIFA 25,Alexander Isak,Alexander Isak,25,ST,86,88,Newcastle United,Sweden,Ball-carrying creators
+R. Lewandowski,FIFA 22,0.9936758,FIFA 25,Kylian Mbappe,Kylian Mbappe Lottin,25,ST,90,93,Real Madrid,France,Ball-carrying creators
+R. Lewandowski,FIFA 22,0.9933774,FIFA 25,Jonathan David,Jonathan Christian David,24,ST,82,85,Lille OSC,Canada,Ball-carrying creators
+R. Lewandowski,FIFA 22,0.98995537,FIFA 25,Erling Haaland,Erling Braut Haland,24,ST,90,92,Manchester City,Norway,Ball-carrying creators
+R. Lewandowski,FIFA 22,0.9831989,FIFA 25,Nicolas Jackson,Nicolas Jackson,23,ST,81,85,Chelsea,Senegal,Balanced all-rounders
+R. Lewandowski,FIFA 22,0.9819282,FIFA 25,Kai Havertz,Kai Lukas Havertz,25,ST,82,84,Arsenal,Germany,Ball-carrying creators
+R. Lewandowski,FIFA 22,0.9816382,FIFA 25,Victor Boniface,Victor Okoh Boniface,23,ST,82,87,Bayer 04 Leverkusen,Nigeria,Balanced all-rounders
+M. Salah,FIFA 26,0.99951124,FIFA 26,A. Isak,Alexander Isak,25,ST,88,89,Liverpool,Sweden,Balanced all-rounders
+M. Salah,FIFA 26,0.9994408,FIFA 26,T. Alexander-Arnold,Trent John Alexander-Arnold,26,"RB, RM",86,87,Real Madrid,England,Balanced all-rounders
+M. Salah,FIFA 26,0.9993999,FIFA 26,T. Reijnders,Tijjani Martinus Jan Reijnders Lekatompessy,26,"CM, CDM, CAM",86,87,Manchester City,Netherlands,Balanced all-rounders
+M. Salah,FIFA 26,0.99916077,FIFA 26,Vini Jr.,Vinicius José Paixão de Oliveira Junior,24,"LW, ST, LM",89,92,Real Madrid,Brazil,Balanced all-rounders
+M. Salah,FIFA 26,0.9990988,FIFA 26,V. Osimhen,Victor James Osimhen,26,ST,87,89,Galatasaray SK,Nigeria,Balanced all-rounders
+M. Salah,FIFA 26,0.99908197,FIFA 26,A. Hakimi,Achraf Hakimi Mouhأشرف حكيمي,26,"RB, RM",89,90,Paris Saint-Germain,Morocco,Balanced all-rounders
+M. Salah,FIFA 26,0.9990781,FIFA 26,F. Valverde,Federico Santiago Valverde Dipetta,26,"CM, CDM, RB",89,90,Real Madrid,Uruguay,Balanced all-rounders
+M. Salah,FIFA 26,0.99901855,FIFA 26,K. Kvaratskhelia,Khvicha Kvaratskheliaხვიჩა კვარაცხელია,24,"LW, RW, LM",87,90,Paris Saint-Germain,Georgia,Balanced all-rounders
+K. Benzema,FIFA 23,0.99594927,FIFA 25,Kylian Mbappe,Kylian Mbappe Lottin,25,ST,90,93,Real Madrid,France,Ball-carrying creators
+K. Benzema,FIFA 23,0.99109447,FIFA 25,Sancet,Oihan Sancet Tirapu,24,CAM,83,88,Athletic Club,Spain,Ball-carrying creators
+K. Benzema,FIFA 23,0.9901105,FIFA 25,Alexander Isak,Alexander Isak,25,ST,86,88,Newcastle United,Sweden,Ball-carrying creators
+K. Benzema,FIFA 23,0.98934966,FIFA 25,Cole Palmer,Cole Jermaine Palmer,22,RM,87,90,Chelsea,England,Ball-carrying creators
+K. Benzema,FIFA 23,0.9877843,FIFA 25,Dani Olmo,Daniel Olmo Carvajal,26,CAM,85,86,FC Barcelona,Spain,Ball-carrying creators
+K. Benzema,FIFA 23,0.98656595,FIFA 25,Vini Jr.,Vinicius Jose Paixao de Oliveira Junior,24,LW,90,94,Real Madrid,Brazil,Ball-carrying creators
+K. Benzema,FIFA 23,0.98307776,FIFA 25,Jamal Musiala,Jamal Musiala,21,CAM,88,92,FC Bayern München,Germany,Ball-carrying creators
+K. Benzema,FIFA 23,0.98242736,FIFA 25,Cody Gakpo,Cody Mathes Gakpo,25,ST,84,85,Liverpool,Netherlands,Ball-carrying creators
