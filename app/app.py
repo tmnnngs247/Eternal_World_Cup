@@ -9,7 +9,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 from components import hero, load_css, metrics_grid, player_cards
 
-ROOT = Path(__file__).parent
+ROOT = Path(__file__).resolve().parents[1]
 PROCESSED = ROOT / "data" / "processed"
 
 st.set_page_config(page_title="The Eternal World Cup", page_icon="⚽", layout="wide")
