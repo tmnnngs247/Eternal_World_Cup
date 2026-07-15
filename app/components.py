@@ -68,15 +68,12 @@ def get_local_image_path(value: object) -> str:
         errors="coerce",
     ).iloc[0]
 
-    if raw_name == "Jude Bellingham":
-    st.write(local_image_path)
-
     if pd.isna(sofifa_id):
         return ""
 
     image_path = PLAYER_FACE_DIR / f"{int(sofifa_id)}.png"
 
-    if not image_path.exists() or not image_path.is_file():
+    if not image_path.is_file():
         return ""
 
     return str(image_path)
@@ -90,7 +87,7 @@ def image_data_uri(path_string: str) -> str:
 
     image_path = Path(path_string)
 
-    if not image_path.exists() or not image_path.is_file():
+    if not image_path.is_file():
         return ""
 
     try:
