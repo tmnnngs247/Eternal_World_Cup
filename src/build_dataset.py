@@ -5,6 +5,7 @@ import re
 
 import pandas as pd
 
+
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data" / "raw"
 PROCESSED = ROOT / "data" / "processed"
@@ -12,17 +13,20 @@ PROCESSED.mkdir(parents=True, exist_ok=True)
 
 
 def infer_season(path: Path) -> int | None:
+    """Infer FIFA season year from filenames such as players_25.csv."""
     match = re.search(r"players?_(\d{2})\.csv", path.name)
+
     if not match:
         return None
 
     return 2000 + int(match.group(1))
 
 
-def first_existing(df: pd.DataFrame, cols: list[str]) -> pd.Series:
-    for col in cols:
-        if col in df.columns:
-            return df[col]
+def first_existing(df: pd.DataFrame, columns: list[str]) -> pd.Series:
+    """Return the first available column, or a blank Series if none exist."""
+    for column in columns:
+        if column in df.columns:
+            return df[column]
 
     return pd.Series(
         [None] * len(df),
@@ -32,6 +36,7 @@ def first_existing(df: pd.DataFrame, cols: list[str]) -> pd.Series:
 
 
 def clean_key(series: pd.Series) -> pd.Series:
+    """Create a normalised lowercase key for joining and deduplication."""
     return (
         series
         .fillna("")
@@ -46,26 +51,28 @@ def clean_key(series: pd.Series) -> pd.Series:
 
 
 def clean_optional_text(series: pd.Series) -> pd.Series:
+    """Clean optional text fields such as image and profile URLs."""
     return (
         series
         .fillna("")
         .astype(str)
-        .replace({
-            "nan": "",
-            "None": "",
-            "<NA>": "",
-        })
+        .replace(
+            {
+                "nan": "",
+                "None": "",
+                "<NA>": "",
+            }
+        )
         .str.strip()
     )
 
 
 def standardise_fifa_file(path: Path) -> pd.DataFrame:
+    """Load and standardise one FIFA player file."""
     season = infer_season(path)
 
     if season is None:
-        raise ValueError(
-            f"Could not infer season from {path.name}"
-        )
+        raise ValueError(f"Could not infer season from {path.name}")
 
     print(f"Reading {path.name}")
 
@@ -111,8 +118,8 @@ def standardise_fifa_file(path: Path) -> pd.DataFrame:
         ["player_positions", "positions", "position"],
     )
 
-    # Optional player identity and image fields.
-    # Older FIFA files may not contain these columns, so blanks are expected.
+    # Optional identity and image fields.
+    # Older FIFA files may not contain these, so blank values are expected.
     out["sofifa_id"] = pd.to_numeric(
         first_existing(
             df,
@@ -122,20 +129,20 @@ def standardise_fifa_file(path: Path) -> pd.DataFrame:
     )
 
     out["image_url"] = clean_optional_text(
-    first_existing(
-        df,
-        ["image_url", "player_face_url", "face_url"],
+        first_existing(
+            df,
+            ["image_url", "player_face_url", "face_url"],
+        )
     )
-)
 
-out["player_url"] = clean_optional_text(
-    first_existing(
-        df,
-        ["player_url", "sofifa_url", "url"],
+    out["player_url"] = clean_optional_text(
+        first_existing(
+            df,
+            ["player_url", "sofifa_url", "url"],
+        )
     )
-)
 
-    numeric_cols = {
+    numeric_columns = {
         "age": ["age"],
         "overall": ["overall", "OVR", "ovr"],
         "potential": ["potential", "POT", "pot"],
@@ -217,19 +224,14 @@ out["player_url"] = clean_optional_text(
         ],
     }
 
-    for new_col, candidates in numeric_cols.items():
-        out[new_col] = pd.to_numeric(
+    for new_column, candidates in numeric_columns.items():
+        out[new_column] = pd.to_numeric(
             first_existing(df, candidates),
             errors="coerce",
         )
 
-    out["name_key"] = clean_key(
-        out["short_name"]
-    )
-
-    club_key = clean_key(
-        out["club_name"]
-    )
+    out["name_key"] = clean_key(out["short_name"])
+    club_key = clean_key(out["club_name"])
 
     out["player_season_id"] = (
         out["name_key"].fillna("unknown")
@@ -283,25 +285,26 @@ def main() -> None:
         keep="first",
     )
 
-    out_csv = PROCESSED / "players_master.csv"
+    output_path = PROCESSED / "players_master.csv"
 
     players.to_csv(
-        out_csv,
+        output_path,
         index=False,
     )
 
-    image_rows = (
+    valid_image_urls = (
         players["image_url"]
         .fillna("")
+        .astype(str)
         .str.startswith(("http://", "https://"))
-        .sum()
     )
 
     print("\nBuilt players_master.csv")
     print(f"Rows: {len(players):,}")
     print(f"Columns: {len(players.columns):,}")
-    print(f"Rows with image URLs: {image_rows:,}")
-    print(f"Output: {out_csv}")
+    print(f"Rows with image URLs: {valid_image_urls.sum():,}")
+    print(f"Image coverage: {valid_image_urls.mean():.1%}")
+    print(f"Output: {output_path}")
 
 
 if __name__ == "__main__":
