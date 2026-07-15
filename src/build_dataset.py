@@ -122,18 +122,18 @@ def standardise_fifa_file(path: Path) -> pd.DataFrame:
     )
 
     out["image_url"] = clean_optional_text(
-        first_existing(
-            df,
-            ["image_url", "player_face_url", "face_url"],
-        )
+    first_existing(
+        df,
+        ["image_url", "player_face_url", "face_url"],
     )
+)
 
-    out["player_url"] = clean_optional_text(
-        first_existing(
-            df,
-            ["player_url", "sofifa_url", "url"],
-        )
+out["player_url"] = clean_optional_text(
+    first_existing(
+        df,
+        ["player_url", "sofifa_url", "url"],
     )
+)
 
     numeric_cols = {
         "age": ["age"],
