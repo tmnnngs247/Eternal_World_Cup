@@ -15,6 +15,10 @@ PROCESSED = ROOT / "data" / "processed"
 st.set_page_config(page_title="The Eternal World Cup", page_icon="⚽", layout="wide")
 load_css()
 
+st.image(
+    "https://cdn.sofifa.net/players/252/371/26_120.png",
+    width=120,
+)
 
 @st.cache_data
 def load_players() -> pd.DataFrame:
