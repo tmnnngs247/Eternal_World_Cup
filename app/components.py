@@ -23,12 +23,19 @@ def load_css() -> None:
         )
 
 
+def clean_text(value: object) -> str:
+    """Return clean display text, removing common missing-value strings."""
+    text = str(value or "").strip()
+
+    if text.lower() in {"", "nan", "none", "<na>"}:
+        return ""
+
+    return text
+
+
 def valid_image_url(value: object) -> str:
     """Return a usable HTTP(S) image URL, otherwise an empty string."""
-    url = str(value or "").strip()
-
-    if url.lower() in {"", "nan", "none", "<na>"}:
-        return ""
+    url = clean_text(value)
 
     if not url.startswith(("http://", "https://")):
         return ""
@@ -103,38 +110,62 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
     cards: list[str] = []
 
     for _, row in df.head(max_cards).iterrows():
-        flag = html.escape(str(row.get("flag", "") or ""))
-
-        raw_name = str(
-            row.get("short_name", row.get("player_name", "Unknown"))
+        raw_name = (
+            clean_text(
+                row.get(
+                    "short_name",
+                    row.get("player_name", "Unknown"),
+                )
+            )
             or "Unknown"
         )
+
         name = html.escape(raw_name)
-
+        flag = html.escape(clean_text(row.get("flag")))
         season = html.escape(
-            str(row.get("season_label", row.get("fifa_version", "")) or "")
+            clean_text(
+                row.get(
+                    "season_label",
+                    row.get("fifa_version"),
+                )
+            )
         )
-
         club = html.escape(
-            str(row.get("club_name", row.get("club", "")) or "")
+            clean_text(
+                row.get(
+                    "club_name",
+                    row.get("club"),
+                )
+            )
         )
-
         nation = html.escape(
-            str(row.get("nationality_name", row.get("country", "")) or "")
+            clean_text(
+                row.get(
+                    "nationality_name",
+                    row.get("country"),
+                )
+            )
         )
-
         position = html.escape(
-            str(row.get("player_positions", row.get("position", "")) or "")
+            clean_text(
+                row.get(
+                    "player_positions",
+                    row.get("position"),
+                )
+            )
         )
-
         overall = html.escape(
-            str(row.get("overall", row.get("ovr", "")) or "")
+            clean_text(
+                row.get(
+                    "overall",
+                    row.get("ovr"),
+                )
+            )
         )
+        age = html.escape(clean_text(row.get("age")))
 
-        age = html.escape(str(row.get("age", "") or ""))
-
-        archetype_name = str(row.get("archetype_name", "") or "").strip()
-        archetype_id = str(row.get("archetype_id", "") or "").strip()
+        archetype_name = clean_text(row.get("archetype_name"))
+        archetype_id = clean_text(row.get("archetype_id"))
 
         if archetype_name:
             archetype_label = html.escape(archetype_name)
@@ -143,52 +174,36 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
         else:
             archetype_label = "Unclassified profile"
 
-        why = html.escape(
-            str(row.get("why_similar", "") or "")
-        )
-
+        why = html.escape(clean_text(row.get("why_similar")))
         differences = html.escape(
-            str(row.get("main_differences", "") or "")
+            clean_text(row.get("main_differences"))
         )
 
         image_url = valid_image_url(row.get("image_url"))
         initials = html.escape(player_initials(raw_name))
 
         if image_url:
-            safe_image_url = html.escape(image_url, quote=True)
+            safe_image_url = html.escape(
+                image_url,
+                quote=True,
+            )
 
-            image_html = dedent(
-                f"""
-                <div class="ewc-player-image-wrap">
-                  <img
-                    class="ewc-player-image"
-                    src="{safe_image_url}"
-                    alt="{name} player portrait"
-                    loading="lazy"
-                    onerror="
-                      this.style.display='none';
-                      this.nextElementSibling.style.display='flex';
-                    "
-                  >
-                  <div
-                    class="ewc-player-image-placeholder"
-                    style="display:none;"
-                  >
-                    {initials}
-                  </div>
-                </div>
-                """
-            ).strip()
+            image_html = (
+                '<div class="ewc-player-image-wrap">'
+                f'<img class="ewc-player-image" '
+                f'src="{safe_image_url}" '
+                f'alt="{name} player portrait" '
+                f'loading="lazy">'
+                "</div>"
+            )
         else:
-            image_html = dedent(
-                f"""
-                <div class="ewc-player-image-wrap">
-                  <div class="ewc-player-image-placeholder">
-                    {initials}
-                  </div>
-                </div>
-                """
-            ).strip()
+            image_html = (
+                '<div class="ewc-player-image-wrap">'
+                f'<div class="ewc-player-image-placeholder">'
+                f"{initials}"
+                "</div>"
+                "</div>"
+            )
 
         similarity = pd.to_numeric(
             pd.Series([row.get("similarity")]),
@@ -229,6 +244,7 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
                           <div class="ewc-player-meta">{season} · {club}</div>
                           <div class="ewc-player-meta">{nation} · {position}</div>
                         </div>
+
                         <div class="ewc-score">{score}</div>
                       </div>
 
