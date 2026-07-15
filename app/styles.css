@@ -258,3 +258,64 @@ ul[role="listbox"] li * {
   font-size: .9rem;
   line-height: 1.45;
 }
+
+/* Player image cards */
+.ewc-player-card-layout {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 1.1rem;
+  align-items: stretch;
+}
+
+.ewc-player-image-wrap {
+  min-height: 160px;
+  overflow: hidden;
+  border: 1px solid var(--ewc-border);
+  border-radius: 1rem;
+  background:
+    radial-gradient(
+      circle at 50% 20%,
+      rgba(125, 211, 252, 0.15),
+      transparent 55%
+    ),
+    rgba(255, 255, 255, 0.045);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.ewc-player-image {
+  display: block;
+  width: 100%;
+  height: 160px;
+  object-fit: contain;
+  object-position: bottom center;
+}
+
+.ewc-player-image-placeholder {
+  width: 100%;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ewc-muted) !important;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+}
+
+.ewc-player-content {
+  min-width: 0;
+}
+
+@media (max-width: 650px) {
+  .ewc-player-card-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .ewc-player-image-wrap,
+  .ewc-player-image,
+  .ewc-player-image-placeholder {
+    height: 200px;
+  }
+}

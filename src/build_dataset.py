@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import re
+
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,6 +15,7 @@ def infer_season(path: Path) -> int | None:
     match = re.search(r"players?_(\d{2})\.csv", path.name)
     if not match:
         return None
+
     return 2000 + int(match.group(1))
 
 
@@ -21,12 +23,18 @@ def first_existing(df: pd.DataFrame, cols: list[str]) -> pd.Series:
     for col in cols:
         if col in df.columns:
             return df[col]
-    return pd.Series([None] * len(df), index=df.index, dtype="object")
+
+    return pd.Series(
+        [None] * len(df),
+        index=df.index,
+        dtype="object",
+    )
 
 
 def clean_key(series: pd.Series) -> pd.Series:
     return (
-        series.fillna("")
+        series
+        .fillna("")
         .astype(str)
         .str.lower()
         .str.normalize("NFKD")
@@ -37,24 +45,95 @@ def clean_key(series: pd.Series) -> pd.Series:
     )
 
 
+def clean_optional_text(series: pd.Series) -> pd.Series:
+    return (
+        series
+        .fillna("")
+        .astype(str)
+        .replace({
+            "nan": "",
+            "None": "",
+            "<NA>": "",
+        })
+        .str.strip()
+    )
+
+
 def standardise_fifa_file(path: Path) -> pd.DataFrame:
     season = infer_season(path)
+
     if season is None:
-        raise ValueError(f"Could not infer season from {path.name}")
+        raise ValueError(
+            f"Could not infer season from {path.name}"
+        )
 
     print(f"Reading {path.name}")
-    df = pd.read_csv(path, low_memory=False, encoding="latin1")
+
+    df = pd.read_csv(
+        path,
+        low_memory=False,
+        encoding="latin1",
+    )
 
     out = pd.DataFrame(index=df.index)
+
     out["source_file"] = path.name
     out["season_year"] = season
     out["season_label"] = f"FIFA {str(season)[-2:]}"
-    out["short_name"] = first_existing(df, ["short_name", "Name", "name", "player_name"])
-    out["long_name"] = first_existing(df, ["long_name", "full_name", "short_name", "Name", "name"])
-    out["club_name"] = first_existing(df, ["club_name", "club", "Club"])
-    out["league_name"] = first_existing(df, ["league_name", "league"])
-    out["nationality_name"] = first_existing(df, ["nationality_name", "nationality", "country"])
-    out["player_positions"] = first_existing(df, ["player_positions", "positions", "position"])
+
+    out["short_name"] = first_existing(
+        df,
+        ["short_name", "Name", "name", "player_name"],
+    )
+
+    out["long_name"] = first_existing(
+        df,
+        ["long_name", "full_name", "short_name", "Name", "name"],
+    )
+
+    out["club_name"] = first_existing(
+        df,
+        ["club_name", "club", "Club"],
+    )
+
+    out["league_name"] = first_existing(
+        df,
+        ["league_name", "league"],
+    )
+
+    out["nationality_name"] = first_existing(
+        df,
+        ["nationality_name", "nationality", "country"],
+    )
+
+    out["player_positions"] = first_existing(
+        df,
+        ["player_positions", "positions", "position"],
+    )
+
+    # Optional player identity and image fields.
+    # Older FIFA files may not contain these columns, so blanks are expected.
+    out["sofifa_id"] = pd.to_numeric(
+        first_existing(
+            df,
+            ["sofifa_id", "player_id", "id"],
+        ),
+        errors="coerce",
+    )
+
+    out["image_url"] = clean_optional_text(
+        first_existing(
+            df,
+            ["image_url", "player_face_url", "face_url"],
+        )
+    )
+
+    out["player_url"] = clean_optional_text(
+        first_existing(
+            df,
+            ["player_url", "sofifa_url", "url"],
+        )
+    )
 
     numeric_cols = {
         "age": ["age"],
@@ -68,30 +147,89 @@ def standardise_fifa_file(path: Path) -> pd.DataFrame:
         "dribbling": ["dribbling", "DRI", "dri"],
         "defending": ["defending", "DEF", "def"],
         "physic": ["physic", "PHY", "phy"],
-        "acceleration": ["movement_acceleration", "acceleration"],
-        "sprint_speed": ["movement_sprint_speed", "sprint_speed"],
-        "finishing": ["attacking_finishing", "finishing"],
-        "short_passing": ["attacking_short_passing", "short_passing"],
-        "long_passing": ["skill_long_passing", "long_passing"],
-        "ball_control": ["skill_ball_control", "ball_control"],
-        "agility": ["movement_agility", "agility"],
-        "reactions": ["movement_reactions", "reactions"],
-        "balance": ["movement_balance", "balance"],
-        "shot_power": ["power_shot_power", "shot_power"],
-        "stamina": ["power_stamina", "stamina"],
-        "strength": ["power_strength", "strength"],
-        "vision": ["mentality_vision", "vision"],
-        "composure": ["mentality_composure", "composure"],
-        "interceptions": ["mentality_interceptions", "interceptions"],
-        "standing_tackle": ["defending_standing_tackle", "standing_tackle"],
-        "sliding_tackle": ["defending_sliding_tackle", "sliding_tackle"],
+        "acceleration": [
+            "movement_acceleration",
+            "acceleration",
+        ],
+        "sprint_speed": [
+            "movement_sprint_speed",
+            "sprint_speed",
+        ],
+        "finishing": [
+            "attacking_finishing",
+            "finishing",
+        ],
+        "short_passing": [
+            "attacking_short_passing",
+            "short_passing",
+        ],
+        "long_passing": [
+            "skill_long_passing",
+            "long_passing",
+        ],
+        "ball_control": [
+            "skill_ball_control",
+            "ball_control",
+        ],
+        "agility": [
+            "movement_agility",
+            "agility",
+        ],
+        "reactions": [
+            "movement_reactions",
+            "reactions",
+        ],
+        "balance": [
+            "movement_balance",
+            "balance",
+        ],
+        "shot_power": [
+            "power_shot_power",
+            "shot_power",
+        ],
+        "stamina": [
+            "power_stamina",
+            "stamina",
+        ],
+        "strength": [
+            "power_strength",
+            "strength",
+        ],
+        "vision": [
+            "mentality_vision",
+            "vision",
+        ],
+        "composure": [
+            "mentality_composure",
+            "composure",
+        ],
+        "interceptions": [
+            "mentality_interceptions",
+            "interceptions",
+        ],
+        "standing_tackle": [
+            "defending_standing_tackle",
+            "standing_tackle",
+        ],
+        "sliding_tackle": [
+            "defending_sliding_tackle",
+            "sliding_tackle",
+        ],
     }
 
     for new_col, candidates in numeric_cols.items():
-        out[new_col] = pd.to_numeric(first_existing(df, candidates), errors="coerce")
+        out[new_col] = pd.to_numeric(
+            first_existing(df, candidates),
+            errors="coerce",
+        )
 
-    out["name_key"] = clean_key(out["short_name"])
-    club_key = clean_key(out["club_name"])
+    out["name_key"] = clean_key(
+        out["short_name"]
+    )
+
+    club_key = clean_key(
+        out["club_name"]
+    )
 
     out["player_season_id"] = (
         out["name_key"].fillna("unknown")
@@ -106,31 +244,63 @@ def standardise_fifa_file(path: Path) -> pd.DataFrame:
 
 def main() -> None:
     fifa_files = sorted(
-        list(RAW.glob("players_*.csv")) +
-        list(RAW.glob("player_*.csv"))
+        list(RAW.glob("players_*.csv"))
+        + list(RAW.glob("player_*.csv"))
     )
 
-    fifa_files = [f for f in fifa_files if infer_season(f) is not None]
+    fifa_files = [
+        file
+        for file in fifa_files
+        if infer_season(file) is not None
+    ]
 
     if not fifa_files:
-        raise FileNotFoundError("No FIFA player files found in data/raw")
+        raise FileNotFoundError(
+            "No FIFA player files found in data/raw"
+        )
 
     print("Found FIFA files:")
-    for f in fifa_files:
-        print(f"  - {f.name}")
 
-    frames = [standardise_fifa_file(f) for f in fifa_files]
+    for file in fifa_files:
+        print(f"  - {file.name}")
 
-    players = pd.concat(frames, ignore_index=True)
-    players = players.dropna(subset=["short_name"])
-    players = players.drop_duplicates(subset=["player_season_id"], keep="first")
+    frames = [
+        standardise_fifa_file(file)
+        for file in fifa_files
+    ]
+
+    players = pd.concat(
+        frames,
+        ignore_index=True,
+    )
+
+    players = players.dropna(
+        subset=["short_name"]
+    )
+
+    players = players.drop_duplicates(
+        subset=["player_season_id"],
+        keep="first",
+    )
 
     out_csv = PROCESSED / "players_master.csv"
-    players.to_csv(out_csv, index=False)
+
+    players.to_csv(
+        out_csv,
+        index=False,
+    )
+
+    image_rows = (
+        players["image_url"]
+        .fillna("")
+        .str.startswith(("http://", "https://"))
+        .sum()
+    )
 
     print("\nBuilt players_master.csv")
     print(f"Rows: {len(players):,}")
     print(f"Columns: {len(players.columns):,}")
+    print(f"Rows with image URLs: {image_rows:,}")
     print(f"Output: {out_csv}")
 
 

@@ -23,6 +23,31 @@ def load_css() -> None:
         )
 
 
+def valid_image_url(value: object) -> str:
+    """Return a usable HTTP(S) image URL, otherwise an empty string."""
+    url = str(value or "").strip()
+
+    if url.lower() in {"", "nan", "none", "<na>"}:
+        return ""
+
+    if not url.startswith(("http://", "https://")):
+        return ""
+
+    return url
+
+
+def player_initials(name: str) -> str:
+    """Create compact initials for the image fallback."""
+    parts = [
+        part
+        for part in html.unescape(name).replace(".", " ").split()
+        if part
+    ]
+
+    initials = "".join(part[0].upper() for part in parts[:2])
+    return initials or "⚽"
+
+
 def hero() -> None:
     render_html(
         """
@@ -80,9 +105,11 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
     for _, row in df.head(max_cards).iterrows():
         flag = html.escape(str(row.get("flag", "") or ""))
 
-        name = html.escape(
-            str(row.get("short_name", row.get("player_name", "Unknown")))
+        raw_name = str(
+            row.get("short_name", row.get("player_name", "Unknown"))
+            or "Unknown"
         )
+        name = html.escape(raw_name)
 
         season = html.escape(
             str(row.get("season_label", row.get("fifa_version", "")) or "")
@@ -124,6 +151,45 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
             str(row.get("main_differences", "") or "")
         )
 
+        image_url = valid_image_url(row.get("image_url"))
+        initials = html.escape(player_initials(raw_name))
+
+        if image_url:
+            safe_image_url = html.escape(image_url, quote=True)
+
+            image_html = dedent(
+                f"""
+                <div class="ewc-player-image-wrap">
+                  <img
+                    class="ewc-player-image"
+                    src="{safe_image_url}"
+                    alt="{name} player portrait"
+                    loading="lazy"
+                    onerror="
+                      this.style.display='none';
+                      this.nextElementSibling.style.display='flex';
+                    "
+                  >
+                  <div
+                    class="ewc-player-image-placeholder"
+                    style="display:none;"
+                  >
+                    {initials}
+                  </div>
+                </div>
+                """
+            ).strip()
+        else:
+            image_html = dedent(
+                f"""
+                <div class="ewc-player-image-wrap">
+                  <div class="ewc-player-image-placeholder">
+                    {initials}
+                  </div>
+                </div>
+                """
+            ).strip()
+
         similarity = pd.to_numeric(
             pd.Series([row.get("similarity")]),
             errors="coerce",
@@ -153,22 +219,28 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
             dedent(
                 f"""
                 <article class="ewc-player-card">
-                  <div class="ewc-player-top">
-                    <div>
-                      <div class="ewc-player-name">{flag} {name}</div>
-                      <div class="ewc-player-meta">{season} · {club}</div>
-                      <div class="ewc-player-meta">{nation} · {position}</div>
+                  <div class="ewc-player-card-layout">
+                    {image_html}
+
+                    <div class="ewc-player-content">
+                      <div class="ewc-player-top">
+                        <div>
+                          <div class="ewc-player-name">{flag} {name}</div>
+                          <div class="ewc-player-meta">{season} · {club}</div>
+                          <div class="ewc-player-meta">{nation} · {position}</div>
+                        </div>
+                        <div class="ewc-score">{score}</div>
+                      </div>
+
+                      <div class="ewc-pill-row">
+                        <span class="ewc-pill">Overall {overall}</span>
+                        <span class="ewc-pill">Age {age}</span>
+                        <span class="ewc-pill">{archetype_label}</span>
+                      </div>
+
+                      {explanation_html}
                     </div>
-                    <div class="ewc-score">{score}</div>
                   </div>
-
-                  <div class="ewc-pill-row">
-                    <span class="ewc-pill">Overall {overall}</span>
-                    <span class="ewc-pill">Age {age}</span>
-                    <span class="ewc-pill">{archetype_label}</span>
-                  </div>
-
-                  {explanation_html}
                 </article>
                 """
             ).strip()
