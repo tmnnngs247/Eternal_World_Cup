@@ -79,28 +79,47 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
 
     for _, row in df.head(max_cards).iterrows():
         flag = html.escape(str(row.get("flag", "") or ""))
+
         name = html.escape(
             str(row.get("short_name", row.get("player_name", "Unknown")))
         )
+
         season = html.escape(
             str(row.get("season_label", row.get("fifa_version", "")) or "")
         )
+
         club = html.escape(
             str(row.get("club_name", row.get("club", "")) or "")
         )
+
         nation = html.escape(
             str(row.get("nationality_name", row.get("country", "")) or "")
         )
+
         position = html.escape(
             str(row.get("player_positions", row.get("position", "")) or "")
         )
+
         overall = html.escape(
             str(row.get("overall", row.get("ovr", "")) or "")
         )
-        age = html.escape(str(row.get("age", "") or ""))
-        cluster = html.escape(str(row.get("archetype_id", "") or ""))
 
-        why = html.escape(str(row.get("why_similar", "") or ""))
+        age = html.escape(str(row.get("age", "") or ""))
+
+        archetype_name = str(row.get("archetype_name", "") or "").strip()
+        archetype_id = str(row.get("archetype_id", "") or "").strip()
+
+        if archetype_name:
+            archetype_label = html.escape(archetype_name)
+        elif archetype_id:
+            archetype_label = html.escape(f"Cluster {archetype_id}")
+        else:
+            archetype_label = "Unclassified profile"
+
+        why = html.escape(
+            str(row.get("why_similar", "") or "")
+        )
+
         differences = html.escape(
             str(row.get("main_differences", "") or "")
         )
@@ -116,7 +135,7 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
             else ""
         )
 
-        explanation_parts = []
+        explanation_parts: list[str] = []
 
         if why:
             explanation_parts.append(
@@ -142,11 +161,13 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
                     </div>
                     <div class="ewc-score">{score}</div>
                   </div>
+
                   <div class="ewc-pill-row">
                     <span class="ewc-pill">Overall {overall}</span>
                     <span class="ewc-pill">Age {age}</span>
-                    <span class="ewc-pill">Cluster {cluster}</span>
+                    <span class="ewc-pill">{archetype_label}</span>
                   </div>
+
                   {explanation_html}
                 </article>
                 """

@@ -165,59 +165,199 @@ latest["display_name"] = (
 
 if page == "Successor Finder":
     st.header("Find a player's closest football DNA matches")
+
     st.markdown(
-        "<div class='ewc-callout'>Pick a reference player-season and search for modern successors "
-        "or historical lookalikes. Similarity is calculated live in embedding space.</div>",
+        "<div class='ewc-callout'>Choose whether you want young successors, "
+        "current replacements, historical lookalikes or an unrestricted similarity search.</div>",
         unsafe_allow_html=True,
     )
 
-    c1, c2, c3 = st.columns([2.4, 1.2, .8])
+    control_row_1 = st.columns([2.3, 1.3, 1.2])
 
-    with c1:
+    with control_row_1[0]:
         selected = st.selectbox(
             "Reference player-season",
-            players.sort_values(["overall", "season_year"], ascending=[False, False])["display_name"].head(5000),
+            players.sort_values(
+                ["overall", "season_year"],
+                ascending=[False, False],
+            )["display_name"].head(5000),
         )
 
-    with c2:
-        pool_choice = st.selectbox(
-            "Comparison pool",
-            ["Latest player-season only", "All player-seasons", "Same season only"],
+    with control_row_1[1]:
+        search_mode = st.selectbox(
+            "Search mode",
+            [
+                "Young successors",
+                "Current replacements",
+                "Historical lookalikes",
+                "All similar players",
+            ],
         )
 
-    with c3:
-        n = st.slider("Matches", 5, 20, 8)
+    with control_row_1[2]:
+        position_match = st.selectbox(
+            "Position match",
+            [
+                "Same broad position",
+                "Exact position",
+                "Any position",
+            ],
+        )
 
-    query = players.loc[players["display_name"].eq(selected)].iloc[0]
+    control_row_2 = st.columns([1.2, 1.2, 1.0])
 
-    if pool_choice == "Latest player-season only":
+    with control_row_2[0]:
+        maximum_age = st.selectbox(
+            "Maximum age",
+            ["Mode default", 21, 23, 25, 27, "No limit"],
+        )
+
+    with control_row_2[1]:
+        minimum_overall = st.slider(
+            "Minimum overall",
+            min_value=50,
+            max_value=95,
+            value=70,
+            step=1,
+        )
+
+    with control_row_2[2]:
+        n = st.slider(
+            "Matches",
+            min_value=5,
+            max_value=20,
+            value=8,
+        )
+
+    query = players.loc[
+        players["display_name"].eq(selected)
+    ].iloc[0]
+
+    def broad_position_group(position_string: object) -> str:
+        positions = str(position_string or "").upper()
+
+        if "GK" in positions:
+            return "Goalkeeper"
+
+        if any(position in positions for position in ["CB", "LB", "RB", "LWB", "RWB"]):
+            return "Defender"
+
+        if any(position in positions for position in ["CDM", "CM", "CAM", "LM", "RM"]):
+            return "Midfielder"
+
+        if any(position in positions for position in ["LW", "RW", "CF", "ST"]):
+            return "Forward"
+
+        return "Other"
+
+    def primary_position(position_string: object) -> str:
+        positions = str(position_string or "")
+        return positions.split(",")[0].strip().upper()
+
+    pool = players.copy()
+
+    if search_mode in {"Young successors", "Current replacements"}:
         pool = latest.copy()
-    elif pool_choice == "Same season only":
-        pool = players[players["season_year"].eq(query["season_year"])].copy()
-    else:
+
+    if search_mode == "Young successors":
+        pool = pool[
+            pd.to_numeric(pool["age"], errors="coerce").le(23)
+        ]
+
+    elif search_mode == "Current replacements":
+        query_age = pd.to_numeric(
+            pd.Series([query.get("age")]),
+            errors="coerce",
+        ).iloc[0]
+
+        if pd.notna(query_age):
+            pool = pool[
+                pd.to_numeric(pool["age"], errors="coerce").lt(query_age)
+            ]
+
+    elif search_mode == "Historical lookalikes":
         pool = players.copy()
 
-    Xq = query[emb_cols].to_numpy(float).reshape(1, -1)
-    X = pool[emb_cols].to_numpy(float)
-
-    res = pool.copy()
-    res["similarity"] = cosine_similarity(Xq, X).ravel()
-    res = (
-        res[res["player_season_id"] != query["player_season_id"]]
-        .sort_values("similarity", ascending=False)
-        .head(n)
-    )
-    res = add_similarity_reasons(res, query)
-
-    player_cards(res, max_cards=n)
-
-    with st.expander("Show table"):
-        cols = [
-            "short_name", "season_label", "club_name", "nationality_name",
-            "overall", "age", "player_positions", "similarity",
-            "why_similar", "archetype_name",
+    if maximum_age not in {"Mode default", "No limit"}:
+        pool = pool[
+            pd.to_numeric(pool["age"], errors="coerce").le(int(maximum_age))
         ]
-        st.dataframe(res[[c for c in cols if c in res.columns]], width="stretch")
+
+    pool = pool[
+        pd.to_numeric(pool["overall"], errors="coerce").ge(minimum_overall)
+    ]
+
+    if position_match == "Same broad position":
+        query_group = broad_position_group(query.get("player_positions"))
+        pool = pool[
+            pool["player_positions"]
+            .map(broad_position_group)
+            .eq(query_group)
+        ]
+
+    elif position_match == "Exact position":
+        query_primary_position = primary_position(
+            query.get("player_positions")
+        )
+        pool = pool[
+            pool["player_positions"]
+            .map(primary_position)
+            .eq(query_primary_position)
+        ]
+
+    pool = pool[
+        pool["player_season_id"].ne(query["player_season_id"])
+    ]
+
+    pool = pool[
+        pool["name_key"].ne(query["name_key"])
+    ]
+
+    if pool.empty:
+        st.warning(
+            "No players match the selected filters. Try widening the age, "
+            "overall or position settings."
+        )
+    else:
+        Xq = query[emb_cols].to_numpy(float).reshape(1, -1)
+        X = pool[emb_cols].to_numpy(float)
+
+        res = pool.copy()
+        res["similarity"] = cosine_similarity(Xq, X).ravel()
+
+        res = (
+            res.sort_values("similarity", ascending=False)
+            .head(n)
+        )
+
+        res = add_similarity_reasons(res, query)
+
+        st.caption(
+            f"Showing {search_mode.lower()} using "
+            f"{position_match.lower()} filtering."
+        )
+
+        player_cards(res, max_cards=n)
+
+        with st.expander("Show table"):
+            cols = [
+                "short_name",
+                "season_label",
+                "club_name",
+                "nationality_name",
+                "overall",
+                "age",
+                "player_positions",
+                "similarity",
+                "why_similar",
+                "main_differences",
+                "archetype_name",
+            ]
+
+            st.dataframe(
+                res[[column for column in cols if column in res.columns]],
+                width="stretch",
+            )
 
 elif page == "Compare Players":
     st.header("Compare two player-seasons")
