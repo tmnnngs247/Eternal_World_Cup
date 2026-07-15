@@ -82,23 +82,24 @@ def metrics_grid(metrics: list[tuple[str, str, str]]) -> None:
 
     for label, value, note in metrics:
         cards.append(
-            dedent(
-                f"""
-                <div class="ewc-metric">
-                  <div class="label">{html.escape(str(label))}</div>
-                  <div class="value">{html.escape(str(value))}</div>
-                  <div class="label">{html.escape(str(note))}</div>
-                </div>
-                """
-            ).strip()
+            (
+                '<div class="ewc-metric">'
+                f'<div class="label">{html.escape(str(label))}</div>'
+                f'<div class="value">{html.escape(str(value))}</div>'
+                f'<div class="label">{html.escape(str(note))}</div>'
+                "</div>"
+            )
         )
 
-    render_html(
-        f"""
-        <div class="ewc-metric-grid">
-          {''.join(cards)}
-        </div>
-        """
+    grid_html = (
+        '<div class="ewc-metric-grid">'
+        + "".join(cards)
+        + "</div>"
+    )
+
+    st.markdown(
+        grid_html,
+        unsafe_allow_html=True,
     )
 
 
@@ -122,6 +123,7 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
 
         name = html.escape(raw_name)
         flag = html.escape(clean_text(row.get("flag")))
+
         season = html.escape(
             clean_text(
                 row.get(
@@ -130,6 +132,7 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
                 )
             )
         )
+
         club = html.escape(
             clean_text(
                 row.get(
@@ -138,6 +141,7 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
                 )
             )
         )
+
         nation = html.escape(
             clean_text(
                 row.get(
@@ -146,6 +150,7 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
                 )
             )
         )
+
         position = html.escape(
             clean_text(
                 row.get(
@@ -154,6 +159,7 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
                 )
             )
         )
+
         overall = html.escape(
             clean_text(
                 row.get(
@@ -162,6 +168,7 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
                 )
             )
         )
+
         age = html.escape(clean_text(row.get("age")))
 
         archetype_name = clean_text(row.get("archetype_name"))
@@ -174,7 +181,10 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
         else:
             archetype_label = "Unclassified profile"
 
-        why = html.escape(clean_text(row.get("why_similar")))
+        why = html.escape(
+            clean_text(row.get("why_similar"))
+        )
+
         differences = html.escape(
             clean_text(row.get("main_differences"))
         )
@@ -193,13 +203,13 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
                 f'<img class="ewc-player-image" '
                 f'src="{safe_image_url}" '
                 f'alt="{name} player portrait" '
-                f'loading="lazy">'
+                'loading="lazy">'
                 "</div>"
             )
         else:
             image_html = (
                 '<div class="ewc-player-image-wrap">'
-                f'<div class="ewc-player-image-placeholder">'
+                '<div class="ewc-player-image-placeholder">'
                 f"{initials}"
                 "</div>"
                 "</div>"
@@ -216,56 +226,53 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
             else ""
         )
 
-        explanation_parts: list[str] = []
+        explanation_html = ""
 
         if why:
-            explanation_parts.append(
+            explanation_html += (
                 f'<div class="ewc-player-why">{why}</div>'
             )
 
         if differences:
-            explanation_parts.append(
-                f'<div class="ewc-player-differences">{differences}</div>'
+            explanation_html += (
+                '<div class="ewc-player-differences">'
+                f"{differences}"
+                "</div>"
             )
 
-        explanation_html = "".join(explanation_parts)
-
-        cards.append(
-            dedent(
-                f"""
-                <article class="ewc-player-card">
-                  <div class="ewc-player-card-layout">
-                    {image_html}
-
-                    <div class="ewc-player-content">
-                      <div class="ewc-player-top">
-                        <div>
-                          <div class="ewc-player-name">{flag} {name}</div>
-                          <div class="ewc-player-meta">{season} · {club}</div>
-                          <div class="ewc-player-meta">{nation} · {position}</div>
-                        </div>
-
-                        <div class="ewc-score">{score}</div>
-                      </div>
-
-                      <div class="ewc-pill-row">
-                        <span class="ewc-pill">Overall {overall}</span>
-                        <span class="ewc-pill">Age {age}</span>
-                        <span class="ewc-pill">{archetype_label}</span>
-                      </div>
-
-                      {explanation_html}
-                    </div>
-                  </div>
-                </article>
-                """
-            ).strip()
+        card_html = (
+            '<article class="ewc-player-card">'
+            '<div class="ewc-player-card-layout">'
+            f"{image_html}"
+            '<div class="ewc-player-content">'
+            '<div class="ewc-player-top">'
+            "<div>"
+            f'<div class="ewc-player-name">{flag} {name}</div>'
+            f'<div class="ewc-player-meta">{season} · {club}</div>'
+            f'<div class="ewc-player-meta">{nation} · {position}</div>'
+            "</div>"
+            f'<div class="ewc-score">{score}</div>'
+            "</div>"
+            '<div class="ewc-pill-row">'
+            f'<span class="ewc-pill">Overall {overall}</span>'
+            f'<span class="ewc-pill">Age {age}</span>'
+            f'<span class="ewc-pill">{archetype_label}</span>'
+            "</div>"
+            f"{explanation_html}"
+            "</div>"
+            "</div>"
+            "</article>"
         )
 
-    render_html(
-        f"""
-        <div class="ewc-card-grid">
-          {''.join(cards)}
-        </div>
-        """
+        cards.append(card_html)
+
+    grid_html = (
+        '<div class="ewc-card-grid">'
+        + "".join(cards)
+        + "</div>"
+    )
+
+    st.markdown(
+        grid_html,
+        unsafe_allow_html=True,
     )
