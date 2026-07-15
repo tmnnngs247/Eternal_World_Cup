@@ -68,6 +68,9 @@ def get_local_image_path(value: object) -> str:
         errors="coerce",
     ).iloc[0]
 
+    if raw_name == "Jude Bellingham":
+    st.write(local_image_path)
+
     if pd.isna(sofifa_id):
         return ""
 

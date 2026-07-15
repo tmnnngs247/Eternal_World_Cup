@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+import re
 import subprocess
 
 import pandas as pd
@@ -25,30 +26,74 @@ def clean_text(value: object) -> str:
     return text
 
 
-def choose_filename(row: pd.Series) -> str:
+def extract_player_id(row: pd.Series) -> int | None:
+    """
+    Return a stable player ID.
+
+    Priority:
+    1. sofifa_id column
+    2. SoFIFA CDN URL such as /players/252/371/
+    3. EA portrait URL such as /p252371.png
+    """
     sofifa_id = pd.to_numeric(
         pd.Series([row.get("sofifa_id")]),
         errors="coerce",
     ).iloc[0]
 
     if pd.notna(sofifa_id):
-        return f"{int(sofifa_id)}.png"
+        return int(sofifa_id)
 
-    player_season_id = clean_text(row.get("player_season_id"))
+    image_url = clean_text(row.get("image_url"))
+
+    sofifa_match = re.search(
+        r"/players/(\d{3})/(\d{3})/",
+        image_url,
+    )
+
+    if sofifa_match:
+        return int(
+            sofifa_match.group(1)
+            + sofifa_match.group(2)
+        )
+
+    ea_match = re.search(
+        r"/p(\d+)\.png",
+        image_url,
+    )
+
+    if ea_match:
+        return int(ea_match.group(1))
+
+    return None
+
+
+def choose_filename(row: pd.Series) -> str:
+    player_id = extract_player_id(row)
+
+    if player_id is not None:
+        return f"{player_id}.png"
+
+    player_season_id = (
+        clean_text(row.get("player_season_id"))
+        or "unknown_player"
+    )
 
     safe_name = "".join(
         char if char.isalnum() or char in {"_", "-"} else "_"
         for char in player_season_id
     )
 
-    return f"{safe_name or 'unknown_player'}.png"
+    return f"{safe_name}.png"
 
 
 def download_image(url: str, destination: Path) -> tuple[bool, str]:
     if destination.exists() and destination.stat().st_size > 0:
         return True, "exists"
 
-    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
 
     temporary_path = destination.with_suffix(".tmp")
 
@@ -79,9 +124,17 @@ def download_image(url: str, destination: Path) -> tuple[bool, str]:
 
     if result.returncode != 0:
         temporary_path.unlink(missing_ok=True)
-        return False, result.stderr.strip() or f"curl exit {result.returncode}"
 
-    if not temporary_path.exists() or temporary_path.stat().st_size == 0:
+        return (
+            False,
+            result.stderr.strip()
+            or f"curl exit {result.returncode}",
+        )
+
+    if (
+        not temporary_path.exists()
+        or temporary_path.stat().st_size == 0
+    ):
         temporary_path.unlink(missing_ok=True)
         return False, "empty download"
 
@@ -95,7 +148,9 @@ def prepare_downloads(players: pd.DataFrame) -> pd.DataFrame:
         "player_season_id",
     }
 
-    missing_columns = required_columns.difference(players.columns)
+    missing_columns = required_columns.difference(
+        players.columns
+    )
 
     if missing_columns:
         raise KeyError(
@@ -105,10 +160,14 @@ def prepare_downloads(players: pd.DataFrame) -> pd.DataFrame:
 
     work = players.copy()
 
-    work["image_url"] = work["image_url"].map(clean_text)
+    work["image_url"] = work["image_url"].map(
+        clean_text
+    )
 
     work = work[
-        work["image_url"].str.startswith(("http://", "https://"))
+        work["image_url"].str.startswith(
+            ("http://", "https://")
+        )
     ].copy()
 
     if LATEST_SEASON_ONLY and "season_year" in work.columns:
@@ -122,6 +181,11 @@ def prepare_downloads(players: pd.DataFrame) -> pd.DataFrame:
         work = work[
             season_year.eq(latest_season)
         ].copy()
+
+    work["resolved_player_id"] = work.apply(
+        extract_player_id,
+        axis=1,
+    )
 
     work["filename"] = work.apply(
         choose_filename,
@@ -154,17 +218,32 @@ def main() -> None:
 
     downloads = prepare_downloads(players)
 
+    id_resolved = downloads[
+        "resolved_player_id"
+    ].notna().sum()
+
+    fallback_names = (
+        len(downloads) - id_resolved
+    )
+
     print(f"Images to process: {len(downloads):,}")
     print(f"Output folder: {OUTPUT_DIR}")
     print(f"Latest season only: {LATEST_SEASON_ONLY}")
+    print(f"Resolved numeric IDs: {id_resolved:,}")
+    print(f"Fallback filenames: {fallback_names:,}")
 
     results: list[dict[str, object]] = []
 
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+    with ThreadPoolExecutor(
+        max_workers=MAX_WORKERS
+    ) as executor:
         futures = {}
 
         for _, row in downloads.iterrows():
-            destination = OUTPUT_DIR / row["filename"]
+            destination = (
+                OUTPUT_DIR
+                / row["filename"]
+            )
 
             future = executor.submit(
                 download_image,
@@ -173,9 +252,16 @@ def main() -> None:
             )
 
             futures[future] = {
-                "short_name": clean_text(row.get("short_name")),
+                "short_name": clean_text(
+                    row.get("short_name")
+                ),
                 "sofifa_id": row.get("sofifa_id"),
-                "season_label": clean_text(row.get("season_label")),
+                "resolved_player_id": row.get(
+                    "resolved_player_id"
+                ),
+                "season_label": clean_text(
+                    row.get("season_label")
+                ),
                 "image_url": row["image_url"],
                 "local_image_path": str(
                     destination.relative_to(ROOT)
