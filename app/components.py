@@ -1,11 +1,17 @@
 from __future__ import annotations
 
+from functools import lru_cache
 from pathlib import Path
 from textwrap import dedent
+import base64
 import html
 
 import pandas as pd
 import streamlit as st
+
+
+ROOT = Path(__file__).resolve().parents[1]
+PLAYER_FACE_DIR = ROOT / "assets" / "player_faces"
 
 
 def render_html(content: str) -> None:
@@ -53,6 +59,45 @@ def player_initials(name: str) -> str:
 
     initials = "".join(part[0].upper() for part in parts[:2])
     return initials or "⚽"
+
+
+def get_local_image_path(value: object) -> str:
+    """Return the downloaded portrait path for a SoFIFA ID if it exists."""
+    sofifa_id = pd.to_numeric(
+        pd.Series([value]),
+        errors="coerce",
+    ).iloc[0]
+
+    if pd.isna(sofifa_id):
+        return ""
+
+    image_path = PLAYER_FACE_DIR / f"{int(sofifa_id)}.png"
+
+    if not image_path.exists() or not image_path.is_file():
+        return ""
+
+    return str(image_path)
+
+
+@lru_cache(maxsize=5000)
+def image_data_uri(path_string: str) -> str:
+    """Convert a downloaded portrait to an embeddable base64 data URI."""
+    if not path_string:
+        return ""
+
+    image_path = Path(path_string)
+
+    if not image_path.exists() or not image_path.is_file():
+        return ""
+
+    try:
+        encoded = base64.b64encode(
+            image_path.read_bytes()
+        ).decode("utf-8")
+    except OSError:
+        return ""
+
+    return f"data:image/png;base64,{encoded}"
 
 
 def hero() -> None:
@@ -189,19 +234,33 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
             clean_text(row.get("main_differences"))
         )
 
-        image_url = valid_image_url(row.get("image_url"))
-        initials = html.escape(player_initials(raw_name))
+        local_image_path = get_local_image_path(
+            row.get("sofifa_id")
+        )
 
-        if image_url:
-            safe_image_url = html.escape(
-                image_url,
+        image_source = image_data_uri(
+            local_image_path
+        )
+
+        if not image_source:
+            image_source = valid_image_url(
+                row.get("image_url")
+            )
+
+        initials = html.escape(
+            player_initials(raw_name)
+        )
+
+        if image_source:
+            safe_image_source = html.escape(
+                image_source,
                 quote=True,
             )
 
             image_html = (
                 '<div class="ewc-player-image-wrap">'
                 f'<img class="ewc-player-image" '
-                f'src="{safe_image_url}" '
+                f'src="{safe_image_source}" '
                 f'alt="{name} player portrait" '
                 'loading="lazy">'
                 "</div>"
