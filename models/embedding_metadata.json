@@ -52,7 +52,7 @@
     "perf_Per 90 Minutes_Blocks_Blocks",
     "perf_Per 90 Minutes_Clr"
   ],
-  "reconstruction_mse": 0.002877240957405996,
-  "training_iterations": 61,
+  "reconstruction_mse": 0.0023623742874502064,
+  "training_iterations": 82,
   "deployed_rows": 45000
 }

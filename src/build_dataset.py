@@ -78,11 +78,12 @@ def standardise_fifa_file(path: Path) -> pd.DataFrame:
 
     print(f"Reading {path.name}")
 
-    df = pd.read_csv(
-        path,
-        low_memory=False,
-        encoding="latin1",
-    )
+    try:
+        df = pd.read_csv(path, low_memory=False, encoding="utf-8")
+    except UnicodeDecodeError:
+        # A handful of raw files (e.g. player_23.csv, player_24.csv) are
+        # genuinely latin1, not UTF-8 misread as latin1 like the rest.
+        df = pd.read_csv(path, low_memory=False, encoding="latin1")
 
     out = pd.DataFrame(index=df.index)
 
