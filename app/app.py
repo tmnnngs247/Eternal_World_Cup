@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import html
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -100,7 +101,7 @@ def add_similarity_reasons(res: pd.DataFrame, query: pd.Series) -> pd.DataFrame:
                 difference_parts.append(f"similar {attr.lower()}")
 
         return pd.Series({
-            "why_similar": f"Closest shared traits: {similar_text}.",
+            "why_similar": f"Shared DNA traits: {similar_text}.",
             "main_differences": "Main differences: " + " and ".join(difference_parts) + ".",
         })
 
@@ -165,9 +166,45 @@ latest["display_name"] = (
 if page == "Successor Finder":
     st.header("Find a player's closest football DNA matches")
 
+    reference_options = players.sort_values(
+        ["overall", "season_year"],
+        ascending=[False, False],
+    )["display_name"].head(5000)
+
+    REFERENCE_KEY = "successor_reference_select"
+    SEARCH_MODE_KEY = "successor_search_mode_select"
+
+    def jump_to_player(name_substring: str, mode: str) -> None:
+        matches = reference_options[
+            reference_options.str.contains(name_substring, case=False, na=False, regex=False)
+        ]
+
+        if not matches.empty:
+            st.session_state[REFERENCE_KEY] = matches.iloc[0]
+
+        st.session_state[SEARCH_MODE_KEY] = mode
+
+    st.markdown("#### Start here")
+
+    start_here_prompts = [
+        ("Can anyone replace Kevin De Bruyne?", "K. De Bruyne", "Young successors"),
+        ("Who carries Cristiano Ronaldo's football DNA?", "Cristiano Ronaldo", "Young successors"),
+        ("Which archetype does Cole Palmer belong to?", "Cole Palmer", "All similar players"),
+        ("Find football's next great playmaker", "L. Modrić", "Young successors"),
+        ("Explore every player, unfiltered", "L. Messi", "All similar players"),
+    ]
+
+    start_here_cols = st.columns(3)
+
+    for i, (label, target, mode) in enumerate(start_here_prompts):
+        with start_here_cols[i % 3]:
+            if st.button(label, key=f"start_here_{i}", width="stretch"):
+                jump_to_player(target, mode)
+
     st.markdown(
-        "<div class='ewc-callout'>Choose whether you want young successors, "
-        "current replacements, historical lookalikes or an unrestricted similarity search.</div>",
+        "<div class='ewc-callout'>Pick a reference player-season below, or use one of the "
+        "questions above. Choose whether you want young successors, current replacements, "
+        "historical lookalikes or an unrestricted DNA search.</div>",
         unsafe_allow_html=True,
     )
 
@@ -176,10 +213,8 @@ if page == "Successor Finder":
     with control_row_1[0]:
         selected = st.selectbox(
             "Reference player-season",
-            players.sort_values(
-                ["overall", "season_year"],
-                ascending=[False, False],
-            )["display_name"].head(5000),
+            reference_options,
+            key=REFERENCE_KEY,
         )
 
     with control_row_1[1]:
@@ -191,6 +226,7 @@ if page == "Successor Finder":
                 "Historical lookalikes",
                 "All similar players",
             ],
+            key=SEARCH_MODE_KEY,
         )
 
     with st.expander("Advanced filters"):
@@ -232,6 +268,19 @@ if page == "Successor Finder":
     query = players.loc[
         players["display_name"].eq(selected)
     ].iloc[0]
+
+    query_archetype = query.get("archetype_name")
+    query_archetype = query_archetype if pd.notna(query_archetype) else "Unclassified profile"
+
+    st.markdown(
+        "<div class='ewc-callout'>🧬 "
+        f"<strong>{html.escape(str(query['short_name']))}</strong>'s football DNA profile: "
+        f"<strong>{html.escape(str(query_archetype))}</strong> "
+        f"&middot; Overall {html.escape(str(query.get('overall', '')))} "
+        f"&middot; Age {html.escape(str(query.get('age', '')))}"
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
     def broad_position_group(position_string: object) -> str:
         positions = str(position_string or "").upper()
@@ -378,7 +427,7 @@ elif page == "Compare Players":
         pb[emb_cols].to_numpy(float).reshape(1, -1),
     )[0, 0]
 
-    st.metric("Football DNA similarity", f"{sim * 100:.1f}%")
+    st.metric("Football DNA Match", f"{sim * 100:.1f}%")
 
     attrs = ["pace", "shooting", "passing", "dribbling", "defending", "physic"]
 
@@ -451,7 +500,7 @@ elif page == "Legend Score":
             .assign(similarity=lambda d: d["similarity"] / 100)
         )
 
-        player_cards(legend_cards, max_cards=12)
+        player_cards(legend_cards, max_cards=12, score_label="Legend Score")
 
         with st.expander("Show full ranking"):
             cols = [

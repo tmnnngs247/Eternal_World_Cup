@@ -158,7 +158,7 @@ def metrics_grid(metrics: list[tuple[str, str, str]]) -> None:
     )
 
 
-def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
+def player_cards(df: pd.DataFrame, max_cards: int = 8, score_label: str = "DNA Match") -> None:
     if df.empty:
         st.info("No matching players found.")
         return
@@ -310,6 +310,15 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
                 "</div>"
             )
 
+        score_html = (
+            '<div class="ewc-score-wrap">'
+            f'<div class="ewc-score-label">{html.escape(score_label)}</div>'
+            f'<div class="ewc-score">{score}</div>'
+            "</div>"
+            if score
+            else ""
+        )
+
         card_html = (
             '<article class="ewc-player-card">'
             '<div class="ewc-player-card-layout">'
@@ -321,7 +330,7 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
             f'<div class="ewc-player-meta">{season} · {club}</div>'
             f'<div class="ewc-player-meta">{nation} · {position}</div>'
             "</div>"
-            f'<div class="ewc-score">{score}</div>'
+            f"{score_html}"
             "</div>"
             '<div class="ewc-pill-row">'
             f'<span class="ewc-pill">Overall {overall}</span>'
