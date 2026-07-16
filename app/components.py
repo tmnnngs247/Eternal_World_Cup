@@ -229,13 +229,13 @@ def _build_card_html(row: pd.Series, score_label: str) -> str:
     else:
         archetype_label = "Unclassified profile"
 
-    why = html.escape(
-        clean_text(row.get("why_similar"))
-    )
+    shares = row.get("shares")
+    differences = row.get("differences")
 
-    differences = html.escape(
-        clean_text(row.get("main_differences"))
-    )
+    successor_score_value = pd.to_numeric(
+        pd.Series([row.get("successor_score")]),
+        errors="coerce",
+    ).iloc[0]
 
     local_image_path = get_local_image_path(
         sofifa_id_from_image_url(row.get("image_url"))
@@ -291,16 +291,28 @@ def _build_card_html(row: pd.Series, score_label: str) -> str:
 
     explanation_html = ""
 
-    if why:
+    if isinstance(shares, list) and shares:
+        items = "".join(f"<li>{html.escape(str(item))}</li>" for item in shares)
         explanation_html += (
-            f'<div class="ewc-player-why">{why}</div>'
+            '<div class="ewc-player-shares">'
+            '<div class="ewc-player-section-label">Shares</div>'
+            f"<ul>{items}</ul>"
+            "</div>"
         )
 
-    if differences:
+    if isinstance(differences, list) and differences:
+        items = "".join(f"<li>{html.escape(str(item))}</li>" for item in differences)
         explanation_html += (
             '<div class="ewc-player-differences">'
-            f"{differences}"
+            '<div class="ewc-player-section-label">Differences</div>'
+            f"<ul>{items}</ul>"
             "</div>"
+        )
+
+    if pd.notna(successor_score_value):
+        explanation_html += (
+            '<div class="ewc-successor-score">Modern Successor Score: '
+            f"<strong>{successor_score_value:.1f}/10</strong></div>"
         )
 
     score_html = (

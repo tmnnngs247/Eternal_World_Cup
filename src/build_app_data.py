@@ -202,6 +202,19 @@ KEEP_COLS = [
     "wc_goals",
     "wc_assists",
     "has_fbref",
+    "ball_control",
+    "finishing",
+    "short_passing",
+    "long_passing",
+    "acceleration",
+    "sprint_speed",
+    "agility",
+    "shot_power",
+    "stamina",
+    "strength",
+    "interceptions",
+    "vision",
+    "standing_tackle",
 ]
 
 

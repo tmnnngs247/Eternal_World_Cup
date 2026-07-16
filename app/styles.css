@@ -237,13 +237,51 @@ p, li, label, span, div {
   font-size: .9rem;
 }
 
-.ewc-player-why {
-  margin-top: .9rem;
-  color: #D6E0EE !important;
-  font-size: .95rem;
-  line-height: 1.45;
+.ewc-player-shares,
+.ewc-player-differences {
+  margin-top: .7rem;
+  font-size: .88rem;
+  line-height: 1.5;
+}
+
+.ewc-player-shares {
   border-top: 1px solid rgba(255,255,255,.12);
-  padding-top: .85rem;
+  padding-top: .75rem;
+}
+
+.ewc-player-section-label {
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--ewc-soft) !important;
+  margin-bottom: .2rem;
+}
+
+.ewc-player-shares ul,
+.ewc-player-differences ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.ewc-player-shares li {
+  color: var(--ewc-green) !important;
+}
+
+.ewc-player-differences li {
+  color: var(--ewc-soft) !important;
+}
+
+.ewc-successor-score {
+  margin-top: .7rem;
+  padding-top: .6rem;
+  border-top: 1px solid rgba(255,255,255,.12);
+  font-size: .88rem;
+  color: var(--ewc-soft) !important;
+}
+
+.ewc-successor-score strong {
+  color: var(--ewc-accent) !important;
 }
 
 .ewc-section-card,
@@ -312,13 +350,6 @@ ul[role="listbox"] li * {
   .ewc-hero {
     padding: 2rem;
   }
-}
-
-.ewc-player-differences {
-  margin-top: .45rem;
-  color: var(--ewc-soft) !important;
-  font-size: .9rem;
-  line-height: 1.45;
 }
 
 /* Player image cards */

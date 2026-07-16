@@ -40,76 +40,139 @@ def load_scores() -> pd.DataFrame:
     return pd.read_csv(path) if path.exists() else pd.DataFrame()
 
 
-def add_similarity_reasons(res: pd.DataFrame, query: pd.Series) -> pd.DataFrame:
-    key_attrs = [
-        "pace",
-        "shooting",
-        "passing",
-        "dribbling",
-        "defending",
-        "physic",
+# Each descriptor averages a small group of related FIFA attributes into one
+# "profile" reading, then compares query vs candidate on that reading. Using
+# groups (not single stats) means a bullet like "elite creative passing
+# profile" reflects passing + vision + long/short passing together, not a
+# single noisy attribute.
+PROFILE_DESCRIPTORS = [
+    # key, columns, strong-shared label, ordinary-shared label, "more" label, "less" label
+    ("passing", ["passing", "vision", "long_passing", "short_passing"],
+     "Elite creative passing profile", "Similar passing profile",
+     "More creative passing", "Less creative passing"),
+    ("shooting", ["shooting", "finishing", "shot_power"],
+     "High attacking output", "Similar shooting profile",
+     "More shooting threat", "Less shooting threat"),
+    ("dribbling", ["dribbling", "ball_control", "agility"],
+     "Elite ball-carrying ability", "Similar dribbling profile",
+     "More ball carrying", "Less ball carrying"),
+    ("pace", ["pace", "acceleration", "sprint_speed"],
+     "Elite pace profile", "Similar pace profile",
+     "More raw pace", "Less raw pace"),
+    ("physic", ["physic", "strength", "stamina"],
+     "Dominant physical profile", "Similar physical profile",
+     "More physical presence", "Less physical presence"),
+    ("defending", ["defending", "interceptions", "standing_tackle"],
+     "Elite defensive output", "Similar defensive profile",
+     "More defensive involvement", "Less defensive involvement"),
+]
+
+SHARE_DIFF_THRESHOLD = 6
+SHARE_MIN_VALUE = 55
+STRONG_VALUE_THRESHOLD = 80
+DIFFERENCE_MIN_THRESHOLD = 8
+
+
+def descriptor_value(row_like: pd.Series, columns: list[str]) -> float:
+    values = [
+        pd.to_numeric(row_like.get(column), errors="coerce")
+        for column in columns
     ]
+    values = [float(value) for value in values if pd.notna(value)]
+    return float(np.mean(values)) if values else float("nan")
 
-    def explain(row: pd.Series) -> pd.Series:
-        comparisons = []
 
-        for attr in key_attrs:
-            if attr not in row.index or attr not in query.index:
-                continue
+def build_profile_comparison(candidate: pd.Series, query: pd.Series) -> dict:
+    share_candidates = []
+    difference_candidates = []
 
-            row_val = pd.to_numeric(row[attr], errors="coerce")
-            query_val = pd.to_numeric(query[attr], errors="coerce")
+    for _, columns, strong_label, similar_label, more_label, less_label in PROFILE_DESCRIPTORS:
+        query_value = descriptor_value(query, columns)
+        candidate_value = descriptor_value(candidate, columns)
 
-            if pd.notna(row_val) and pd.notna(query_val):
-                comparisons.append({
-                    "attribute": attr,
-                    "difference": abs(float(row_val) - float(query_val)),
-                    "signed_difference": float(row_val) - float(query_val),
-                })
+        if pd.isna(query_value) or pd.isna(candidate_value):
+            continue
 
-        if not comparisons:
-            return pd.Series({
-                "why_similar": "Similar overall football DNA profile.",
-                "main_differences": "No comparable headline attributes available.",
-            })
+        diff = candidate_value - query_value
+        abs_diff = abs(diff)
 
-        comparisons = sorted(comparisons, key=lambda x: x["difference"])
+        if abs_diff <= SHARE_DIFF_THRESHOLD and min(query_value, candidate_value) >= SHARE_MIN_VALUE:
+            average_value = (query_value + candidate_value) / 2
+            label = strong_label if average_value >= STRONG_VALUE_THRESHOLD else similar_label
+            share_candidates.append((abs_diff, label))
+        elif abs_diff >= DIFFERENCE_MIN_THRESHOLD:
+            difference_candidates.append((abs_diff, more_label if diff > 0 else less_label))
 
-        closest = comparisons[:3]
-        furthest = sorted(
-            comparisons,
-            key=lambda x: x["difference"],
-            reverse=True,
-        )[:2]
+    share_candidates.sort(key=lambda item: item[0])
+    difference_candidates.sort(key=lambda item: -item[0])
 
-        similar_text = ", ".join(
-            item["attribute"].replace("_", " ").title()
-            for item in closest
+    shares = [label for _, label in share_candidates[:4]]
+    differences = [label for _, label in difference_candidates[:3]]
+
+    query_age = pd.to_numeric(query.get("age"), errors="coerce")
+    candidate_age = pd.to_numeric(candidate.get("age"), errors="coerce")
+
+    if pd.notna(query_age) and pd.notna(candidate_age):
+        age_gap = float(query_age) - float(candidate_age)
+
+        if abs(age_gap) >= 2:
+            qualifier = "Significantly" if abs(age_gap) >= 6 else "Slightly"
+            direction = "younger" if age_gap > 0 else "older"
+            differences.append(f"{qualifier} {direction} profile")
+
+    if not shares:
+        shares = ["Broadly similar overall football DNA profile"]
+
+    if not differences:
+        differences = ["No standout attribute differences"]
+
+    return {"shares": shares, "differences": differences}
+
+
+def successor_score(similarity: float, query: pd.Series, candidate: pd.Series) -> float:
+    """A narrative 0-10 score: DNA similarity, weighted toward candidates who
+    represent a younger generation rather than a same-era peer. Deliberately
+    leaves headroom below 10 -- reaching the ceiling requires both a
+    near-perfect DNA match and a large generational gap, not just one or the
+    other, so results don't all peg at the maximum within a single search."""
+    similarity_component = similarity * 8.5
+    query_age = pd.to_numeric(query.get("age"), errors="coerce")
+    candidate_age = pd.to_numeric(candidate.get("age"), errors="coerce")
+    age_component = 0.0
+
+    if pd.notna(query_age) and pd.notna(candidate_age):
+        age_gap = float(query_age) - float(candidate_age)
+        age_factor = max(0.0, min(1.0, age_gap / 15))
+        age_component = age_factor * 1.5
+
+    return max(0.0, min(10.0, similarity_component + age_component))
+
+
+def add_similarity_reasons(res: pd.DataFrame, query: pd.Series) -> pd.DataFrame:
+    res = res.copy()
+    shares_column = []
+    differences_column = []
+    score_column = []
+
+    for _, row in res.iterrows():
+        comparison = build_profile_comparison(row, query)
+        shares_column.append(comparison["shares"])
+        differences_column.append(comparison["differences"])
+
+        similarity_value = pd.to_numeric(
+            pd.Series([row.get("similarity")]),
+            errors="coerce",
+        ).iloc[0]
+
+        score_column.append(
+            successor_score(float(similarity_value), query, row)
+            if pd.notna(similarity_value)
+            else float("nan")
         )
 
-        difference_parts = []
-
-        for item in furthest:
-            attr = item["attribute"].replace("_", " ").title()
-            signed_diff = item["signed_difference"]
-
-            if signed_diff > 0:
-                difference_parts.append(f"more {attr.lower()}")
-            elif signed_diff < 0:
-                difference_parts.append(f"less {attr.lower()}")
-            else:
-                difference_parts.append(f"similar {attr.lower()}")
-
-        return pd.Series({
-            "why_similar": f"Shared DNA traits: {similar_text}.",
-            "main_differences": "Main differences: " + " and ".join(difference_parts) + ".",
-        })
-
-    explanations = res.apply(explain, axis=1)
-
-    res = res.copy()
-    res["why_similar"] = explanations["why_similar"]
-    res["main_differences"] = explanations["main_differences"]
+    res["shares"] = shares_column
+    res["differences"] = differences_column
+    res["successor_score"] = score_column
 
     return res
 
@@ -389,6 +452,10 @@ if page == "Successor Finder":
         player_cards(res, max_cards=n)
 
         with st.expander("Show table"):
+            table_res = res.copy()
+            table_res["shares"] = table_res["shares"].apply("; ".join)
+            table_res["differences"] = table_res["differences"].apply("; ".join)
+
             cols = [
                 "short_name",
                 "season_label",
@@ -398,13 +465,14 @@ if page == "Successor Finder":
                 "age",
                 "player_positions",
                 "similarity",
-                "why_similar",
-                "main_differences",
+                "successor_score",
+                "shares",
+                "differences",
                 "archetype_name",
             ]
 
             st.dataframe(
-                res[[column for column in cols if column in res.columns]],
+                table_res[[column for column in cols if column in table_res.columns]],
                 width="stretch",
             )
 
