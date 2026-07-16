@@ -196,6 +196,11 @@ KEEP_COLS = [
     "dribbling",
     "defending",
     "physic",
+    "roster_pos",
+    "roster_club",
+    "wc_apps",
+    "wc_goals",
+    "wc_assists",
 ]
 
 

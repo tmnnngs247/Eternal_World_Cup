@@ -269,6 +269,72 @@ def load_fbref_performance() -> pd.DataFrame | None:
     return fbref.rename(columns={c: f"perf_{c}" for c in feature_cols})
 
 
+def abbreviate_name(full_name: str) -> str:
+    """Mimic FIFA's usual short_name style: first initial + last surname word."""
+    parts = str(full_name).split()
+    if len(parts) < 2:
+        return full_name
+    return f"{parts[0][0]}. {parts[-1]}"
+
+
+def load_world_cup_rosters() -> pd.DataFrame | None:
+    """Load World Cup tournament appearances/goals, keyed to match players_master rows.
+
+    Sourced from fbref.com's per-tournament "Player Standard Stats" tables
+    (data/raw/world_cup_<year>_player_stats.csv). FBRef lists full player
+    names, but FIFA's short_name is often abbreviated (and not always the
+    same way), so each row is matched by trying the raw name first and
+    falling back to an abbreviated form.
+    """
+    frames = []
+
+    for path in sorted(RAW.glob("world_cup_*_player_stats.csv")):
+        match = re.search(r"world_cup_(\d{4})_player_stats\.csv", path.name)
+
+        if not match:
+            continue
+
+        season_year = int(match.group(1))
+        df = pd.read_csv(path, low_memory=False)
+        df["season_year"] = season_year
+        frames.append(df)
+
+    if not frames:
+        print("Missing: world_cup_*_player_stats.csv (no World Cup roster data)")
+        return None
+
+    wc = pd.concat(frames, ignore_index=True)
+    wc["key_raw"] = clean_key(wc["player"])
+    wc["key_abbrev"] = clean_key(wc["player"].map(abbreviate_name))
+    wc["wc_apps"] = pd.to_numeric(wc.get("games"), errors="coerce")
+    wc["wc_goals"] = pd.to_numeric(wc.get("goals"), errors="coerce")
+    wc["wc_assists"] = pd.to_numeric(wc.get("assists"), errors="coerce")
+    wc["roster_pos"] = wc.get("position")
+    wc["roster_club"] = wc.get("club")
+
+    keep = ["key_raw", "key_abbrev", "season_year", "wc_apps", "wc_goals", "wc_assists", "roster_pos", "roster_club"]
+    return wc[keep].drop_duplicates(subset=["key_raw", "season_year"], keep="first")
+
+
+def merge_world_cup_rosters(players: pd.DataFrame, wc: pd.DataFrame) -> pd.DataFrame:
+    """Left-merge World Cup roster data by trying an exact name match, then an abbreviated one."""
+    master_keys = set(zip(players["name_key"], players["season_year"]))
+
+    def resolve(row):
+        if (row["key_raw"], row["season_year"]) in master_keys:
+            return row["key_raw"]
+        if (row["key_abbrev"], row["season_year"]) in master_keys:
+            return row["key_abbrev"]
+        return None
+
+    wc = wc.copy()
+    wc["name_key"] = wc.apply(resolve, axis=1)
+    wc = wc.dropna(subset=["name_key"]).drop_duplicates(subset=["name_key", "season_year"], keep="first")
+    wc_cols = ["name_key", "season_year", "wc_apps", "wc_goals", "wc_assists", "roster_pos", "roster_club"]
+
+    return players.merge(wc[wc_cols], on=["name_key", "season_year"], how="left")
+
+
 def main() -> None:
     fifa_files = sorted(
         list(RAW.glob("players_*.csv"))
@@ -318,6 +384,13 @@ def main() -> None:
         perf_cols = [c for c in players.columns if c.startswith("perf_")]
         has_fbref = players[perf_cols].notna().any(axis=1) if perf_cols else None
 
+    wc = load_world_cup_rosters()
+    has_wc = None
+
+    if wc is not None:
+        players = merge_world_cup_rosters(players, wc)
+        has_wc = players["wc_apps"].notna()
+
     output_path = PROCESSED / "players_master.csv"
 
     players.to_csv(
@@ -341,6 +414,9 @@ def main() -> None:
     if has_fbref is not None:
         print(f"Rows with FBRef performance data: {has_fbref.sum():,}")
         print(f"FBRef coverage: {has_fbref.mean():.1%}")
+
+    if has_wc is not None:
+        print(f"Rows with World Cup roster data: {has_wc.sum():,}")
 
     print(f"Output: {output_path}")
 

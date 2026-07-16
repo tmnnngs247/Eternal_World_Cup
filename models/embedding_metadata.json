@@ -54,5 +54,5 @@
   ],
   "reconstruction_mse": 0.0023623742874502064,
   "training_iterations": 82,
-  "deployed_rows": 45000
+  "deployed_rows": 45610
 }

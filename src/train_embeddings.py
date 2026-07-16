@@ -39,7 +39,7 @@ def encode_bottleneck(mlp: MLPRegressor, X: np.ndarray, bottleneck_layer: int) -
 
 
 def main():
-    players = pd.read_csv(PROCESSED / "players_master.csv")
+    players = pd.read_csv(PROCESSED / "players_master.csv", low_memory=False)
     perf_cols = [c for c in players.columns if c.startswith("perf_")]
     feature_cols = [c for c in BASE_FEATURES + perf_cols if c in players.columns]
     numeric = players[feature_cols].apply(pd.to_numeric, errors="coerce")
@@ -76,17 +76,16 @@ def main():
     for i in range(n_components):
         out[f"emb_{i:02d}"] = emb[:, i]
 
-    # Keep the deployed app lightweight: top player-seasons by season plus all 2026 top players and World Cup roster matches.
+    # Keep the deployed app lightweight: top player-seasons by season plus all World Cup roster matches.
     out["overall_sort"] = pd.to_numeric(out.get("overall"), errors="coerce").fillna(0)
     top_by_season = out.sort_values("overall_sort", ascending=False).groupby("season_year", group_keys=False).head(4500)
-    roster_matches = out[out.get("roster_id", pd.Series(index=out.index)).notna()] if "roster_id" in out.columns else out.iloc[0:0]
+    roster_matches = out[out.get("wc_apps", pd.Series(index=out.index)).notna()] if "wc_apps" in out.columns else out.iloc[0:0]
     deployed = pd.concat([top_by_season, roster_matches], ignore_index=True).drop_duplicates("player_season_id", keep="first")
     keep_cols = [
         "player_season_id", "name_key", "short_name", "long_name", "season_year", "season_label",
         "club_name", "league_name", "nationality_name", "flag", "player_positions", "age", "overall", "potential",
         "height_cm", "weight_kg", "preferred_foot", "weak_foot", "skill_moves", "international_reputation",
-        "image_url", "roster_id", "roster_pos", "roster_no", "roster_club", "roster_caps", "roster_goals",
-        "wc_apps", "wc_goals",
+        "image_url", "roster_pos", "roster_club", "wc_apps", "wc_goals", "wc_assists",
     ]
     keep_cols = [c for c in keep_cols if c in deployed.columns] + [c for c in BASE_FEATURES if c in deployed.columns] + [f"emb_{i:02d}" for i in range(n_components)]
     deployed = deployed.loc[:, list(dict.fromkeys(keep_cols))]
