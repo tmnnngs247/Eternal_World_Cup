@@ -193,6 +193,12 @@ p, li, label, span, div {
   font-size: .9rem;
 }
 
+.ewc-pill-confidence {
+  border-color: rgba(134, 239, 172, .4);
+  background: rgba(134, 239, 172, .12);
+  color: var(--ewc-green) !important;
+}
+
 .ewc-player-why {
   margin-top: .9rem;
   color: #D6E0EE !important;

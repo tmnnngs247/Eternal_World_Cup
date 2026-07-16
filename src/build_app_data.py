@@ -201,6 +201,7 @@ KEEP_COLS = [
     "wc_apps",
     "wc_goals",
     "wc_assists",
+    "has_fbref",
 ]
 
 

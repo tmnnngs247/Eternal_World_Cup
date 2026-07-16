@@ -85,7 +85,7 @@ def main():
         "player_season_id", "name_key", "short_name", "long_name", "season_year", "season_label",
         "club_name", "league_name", "nationality_name", "flag", "player_positions", "age", "overall", "potential",
         "height_cm", "weight_kg", "preferred_foot", "weak_foot", "skill_moves", "international_reputation",
-        "image_url", "roster_pos", "roster_club", "wc_apps", "wc_goals", "wc_assists",
+        "image_url", "roster_pos", "roster_club", "wc_apps", "wc_goals", "wc_assists", "has_fbref",
     ]
     keep_cols = [c for c in keep_cols if c in deployed.columns] + [c for c in BASE_FEATURES if c in deployed.columns] + [f"emb_{i:02d}" for i in range(n_components)]
     deployed = deployed.loc[:, list(dict.fromkeys(keep_cols))]

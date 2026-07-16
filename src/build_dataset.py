@@ -383,6 +383,7 @@ def main() -> None:
         players = players.merge(fbref, on=["name_key", "season_year"], how="left")
         perf_cols = [c for c in players.columns if c.startswith("perf_")]
         has_fbref = players[perf_cols].notna().any(axis=1) if perf_cols else None
+        players["has_fbref"] = has_fbref.fillna(False) if has_fbref is not None else False
 
     wc = load_world_cup_rosters()
     has_wc = None
