@@ -171,7 +171,7 @@ if page == "Successor Finder":
         unsafe_allow_html=True,
     )
 
-    control_row_1 = st.columns([2.3, 1.3, 1.2])
+    control_row_1 = st.columns([2.3, 1.3])
 
     with control_row_1[0]:
         selected = st.selectbox(
@@ -193,40 +193,41 @@ if page == "Successor Finder":
             ],
         )
 
-    with control_row_1[2]:
-        position_match = st.selectbox(
-            "Position match",
-            [
-                "Same broad position",
-                "Exact position",
-                "Any position",
-            ],
-        )
+    with st.expander("Advanced filters"):
+        advanced_row = st.columns(4)
 
-    control_row_2 = st.columns([1.2, 1.2, 1.0])
+        with advanced_row[0]:
+            position_match = st.selectbox(
+                "Position match",
+                [
+                    "Same broad position",
+                    "Exact position",
+                    "Any position",
+                ],
+            )
 
-    with control_row_2[0]:
-        maximum_age = st.selectbox(
-            "Maximum age",
-            ["Mode default", 21, 23, 25, 27, "No limit"],
-        )
+        with advanced_row[1]:
+            maximum_age = st.selectbox(
+                "Maximum age",
+                ["Mode default", 21, 23, 25, 27, "No limit"],
+            )
 
-    with control_row_2[1]:
-        minimum_overall = st.slider(
-            "Minimum overall",
-            min_value=50,
-            max_value=95,
-            value=70,
-            step=1,
-        )
+        with advanced_row[2]:
+            minimum_overall = st.slider(
+                "Minimum overall",
+                min_value=50,
+                max_value=95,
+                value=70,
+                step=1,
+            )
 
-    with control_row_2[2]:
-        n = st.slider(
-            "Matches",
-            min_value=5,
-            max_value=20,
-            value=8,
-        )
+        with advanced_row[3]:
+            n = st.slider(
+                "Matches",
+                min_value=5,
+                max_value=20,
+                value=8,
+            )
 
     query = players.loc[
         players["display_name"].eq(selected)
