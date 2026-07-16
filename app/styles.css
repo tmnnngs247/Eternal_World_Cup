@@ -138,6 +138,35 @@ p, li, label, span, div {
   margin-top: 1.4rem;
 }
 
+.ewc-pathway {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .3rem;
+  max-width: 560px;
+  margin: 1.4rem auto 0;
+}
+
+.ewc-pathway .ewc-player-card {
+  width: 100%;
+}
+
+.ewc-pathway-connector {
+  font-size: 1.7rem;
+  line-height: 1;
+  color: var(--ewc-accent);
+  margin: .1rem 0;
+}
+
+.ewc-pathway-step-label {
+  font-size: .72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--ewc-soft) !important;
+  margin-top: .5rem;
+}
+
 .ewc-player-card,
 .player-card {
   border: 1px solid var(--ewc-border);

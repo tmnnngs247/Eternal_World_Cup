@@ -8,7 +8,7 @@ import plotly.express as px
 import streamlit as st
 from sklearn.metrics.pairwise import cosine_similarity
 
-from components import hero, load_css, metrics_grid, player_cards
+from components import dna_pathway, hero, load_css, metrics_grid, player_cards
 
 ROOT = Path(__file__).resolve().parents[1]
 PROCESSED = ROOT / "data" / "processed"
@@ -129,7 +129,7 @@ with st.sidebar:
     st.markdown("---")
     page = st.radio(
         "Navigate",
-        ["Successor Finder", "Compare Players", "Evolution", "DNA Map", "Legend Score", "Archetypes", "Method"],
+        ["Successor Finder", "Compare Players", "Evolution", "Pathways", "DNA Map", "Legend Score", "Archetypes", "Method"],
         label_visibility="collapsed",
     )
     st.markdown("---")
@@ -618,6 +618,107 @@ elif page == "Evolution":
 
         st.subheader("Career snapshots")
         player_cards(timeline, max_cards=len(timeline))
+
+elif page == "Pathways":
+    st.header("Football DNA succession pathways")
+
+    st.markdown(
+        "<div class='ewc-callout'>Start from a player and follow the chain: each step finds "
+        "the closest football DNA match among today's players who are meaningfully younger "
+        "than the step before it -- tracing a generational lineage rather than a single list "
+        "of matches.</div>",
+        unsafe_allow_html=True,
+    )
+
+    pathway_options = latest.sort_values("overall", ascending=False)["display_name"].head(3000)
+
+    control_row = st.columns([2.2, 1])
+
+    with control_row[0]:
+        default_pathway_index = 0
+        debruyne_matches = pathway_options[
+            pathway_options.str.contains("De Bruyne", case=False, na=False)
+        ]
+
+        if not debruyne_matches.empty:
+            option_list = pathway_options.tolist()
+            default_pathway_index = option_list.index(debruyne_matches.iloc[0])
+
+        selected_pathway_player = st.selectbox(
+            "Start from",
+            pathway_options,
+            index=default_pathway_index,
+        )
+
+    with control_row[1]:
+        pathway_steps = st.slider("Generations", min_value=2, max_value=5, value=4)
+
+    with st.expander("Advanced options"):
+        min_age_gap = st.slider(
+            "Minimum age gap per step",
+            min_value=1,
+            max_value=6,
+            value=3,
+        )
+
+    start_row = latest.loc[
+        latest["display_name"].eq(selected_pathway_player)
+    ].iloc[0]
+
+    chain_rows = [start_row]
+    step_labels = ["Starting point"]
+    excluded_name_keys = {start_row["name_key"]}
+    current_row = start_row
+
+    for step in range(pathway_steps):
+        current_age = pd.to_numeric(
+            pd.Series([current_row.get("age")]),
+            errors="coerce",
+        ).iloc[0]
+
+        if pd.isna(current_age):
+            break
+
+        candidate_pool = latest[
+            pd.to_numeric(latest["age"], errors="coerce").le(current_age - min_age_gap)
+            & ~latest["name_key"].isin(excluded_name_keys)
+        ]
+
+        if candidate_pool.empty:
+            break
+
+        Xq = current_row[emb_cols].to_numpy(float).reshape(1, -1)
+        X = candidate_pool[emb_cols].to_numpy(float)
+
+        similarities = cosine_similarity(Xq, X).ravel()
+        best_position = similarities.argmax()
+
+        next_row = candidate_pool.iloc[best_position].copy()
+        next_row["similarity"] = similarities[best_position]
+
+        chain_rows.append(next_row)
+        step_labels.append(f"Generation {step + 1}")
+        excluded_name_keys.add(next_row["name_key"])
+        current_row = next_row
+
+    if len(chain_rows) < 2:
+        st.warning(
+            "Couldn't extend a pathway from this player -- try a smaller minimum age gap "
+            "or a different starting player."
+        )
+    else:
+        dna_pathway(chain_rows, step_labels)
+
+        if len(chain_rows) - 1 < pathway_steps:
+            st.caption(
+                f"Pathway stopped after {len(chain_rows) - 1} generation(s): no further "
+                "meaningfully younger DNA match was found. Try a smaller minimum age gap."
+            )
+        else:
+            st.markdown(
+                "<div class='ewc-callout'>🧬 Who comes next?</div>",
+                unsafe_allow_html=True,
+            )
 
 elif page == "DNA Map":
     st.header("Football DNA map")

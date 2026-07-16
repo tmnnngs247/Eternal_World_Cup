@@ -158,192 +158,194 @@ def metrics_grid(metrics: list[tuple[str, str, str]]) -> None:
     )
 
 
+def _build_card_html(row: pd.Series, score_label: str) -> str:
+    raw_name = (
+        clean_text(
+            row.get(
+                "short_name",
+                row.get("player_name", "Unknown"),
+            )
+        )
+        or "Unknown"
+    )
+
+    name = html.escape(raw_name)
+    flag = html.escape(clean_text(row.get("flag")))
+
+    season = html.escape(
+        clean_text(
+            row.get(
+                "season_label",
+                row.get("fifa_version"),
+            )
+        )
+    )
+
+    club = html.escape(
+        clean_text(
+            row.get(
+                "club_name",
+                row.get("club"),
+            )
+        )
+    )
+
+    nation = html.escape(
+        clean_text(
+            row.get(
+                "nationality_name",
+                row.get("country"),
+            )
+        )
+    )
+
+    position = html.escape(
+        clean_text(
+            row.get(
+                "player_positions",
+                row.get("position"),
+            )
+        )
+    )
+
+    overall = html.escape(
+        clean_text(
+            row.get(
+                "overall",
+                row.get("ovr"),
+            )
+        )
+    )
+
+    age = html.escape(clean_text(row.get("age")))
+
+    archetype_name = clean_text(row.get("archetype_name"))
+    archetype_id = clean_text(row.get("archetype_id"))
+
+    if archetype_name:
+        archetype_label = html.escape(archetype_name)
+    elif archetype_id:
+        archetype_label = html.escape(f"Cluster {archetype_id}")
+    else:
+        archetype_label = "Unclassified profile"
+
+    why = html.escape(
+        clean_text(row.get("why_similar"))
+    )
+
+    differences = html.escape(
+        clean_text(row.get("main_differences"))
+    )
+
+    local_image_path = get_local_image_path(
+        sofifa_id_from_image_url(row.get("image_url"))
+    )
+
+    image_source = image_data_uri(
+        local_image_path
+    )
+
+    if not image_source:
+        image_source = valid_image_url(
+            row.get("image_url")
+        )
+
+    initials = html.escape(
+        player_initials(raw_name)
+    )
+
+    if image_source:
+        safe_image_source = html.escape(
+            image_source,
+            quote=True,
+        )
+
+        image_html = (
+            '<div class="ewc-player-image-wrap">'
+            f'<img class="ewc-player-image" '
+            f'src="{safe_image_source}" '
+            f'alt="{name} player portrait" '
+            'loading="lazy" '
+            'referrerpolicy="no-referrer">'
+            "</div>"
+        )
+    else:
+        image_html = (
+            '<div class="ewc-player-image-wrap">'
+            '<div class="ewc-player-image-placeholder">'
+            f"{initials}"
+            "</div>"
+            "</div>"
+        )
+
+    similarity = pd.to_numeric(
+        pd.Series([row.get("similarity")]),
+        errors="coerce",
+    ).iloc[0]
+
+    score = (
+        f"{float(similarity) * 100:.1f}%"
+        if pd.notna(similarity)
+        else ""
+    )
+
+    explanation_html = ""
+
+    if why:
+        explanation_html += (
+            f'<div class="ewc-player-why">{why}</div>'
+        )
+
+    if differences:
+        explanation_html += (
+            '<div class="ewc-player-differences">'
+            f"{differences}"
+            "</div>"
+        )
+
+    score_html = (
+        '<div class="ewc-score-wrap">'
+        f'<div class="ewc-score-label">{html.escape(score_label)}</div>'
+        f'<div class="ewc-score">{score}</div>'
+        "</div>"
+        if score
+        else ""
+    )
+
+    return (
+        '<article class="ewc-player-card">'
+        '<div class="ewc-player-card-layout">'
+        f"{image_html}"
+        '<div class="ewc-player-content">'
+        '<div class="ewc-player-top">'
+        "<div>"
+        f'<div class="ewc-player-name">{flag} {name}</div>'
+        f'<div class="ewc-player-meta">{season} · {club}</div>'
+        f'<div class="ewc-player-meta">{nation} · {position}</div>'
+        "</div>"
+        f"{score_html}"
+        "</div>"
+        '<div class="ewc-pill-row">'
+        f'<span class="ewc-pill">Overall {overall}</span>'
+        f'<span class="ewc-pill">Age {age}</span>'
+        f'<span class="ewc-pill">{archetype_label}</span>'
+        "</div>"
+        f"{explanation_html}"
+        "</div>"
+        "</div>"
+        "</article>"
+    )
+
+
 def player_cards(df: pd.DataFrame, max_cards: int = 8, score_label: str = "DNA Match") -> None:
     if df.empty:
         st.info("No matching players found.")
         return
 
-    cards: list[str] = []
-
-    for _, row in df.head(max_cards).iterrows():
-        raw_name = (
-            clean_text(
-                row.get(
-                    "short_name",
-                    row.get("player_name", "Unknown"),
-                )
-            )
-            or "Unknown"
-        )
-
-        name = html.escape(raw_name)
-        flag = html.escape(clean_text(row.get("flag")))
-
-        season = html.escape(
-            clean_text(
-                row.get(
-                    "season_label",
-                    row.get("fifa_version"),
-                )
-            )
-        )
-
-        club = html.escape(
-            clean_text(
-                row.get(
-                    "club_name",
-                    row.get("club"),
-                )
-            )
-        )
-
-        nation = html.escape(
-            clean_text(
-                row.get(
-                    "nationality_name",
-                    row.get("country"),
-                )
-            )
-        )
-
-        position = html.escape(
-            clean_text(
-                row.get(
-                    "player_positions",
-                    row.get("position"),
-                )
-            )
-        )
-
-        overall = html.escape(
-            clean_text(
-                row.get(
-                    "overall",
-                    row.get("ovr"),
-                )
-            )
-        )
-
-        age = html.escape(clean_text(row.get("age")))
-
-        archetype_name = clean_text(row.get("archetype_name"))
-        archetype_id = clean_text(row.get("archetype_id"))
-
-        if archetype_name:
-            archetype_label = html.escape(archetype_name)
-        elif archetype_id:
-            archetype_label = html.escape(f"Cluster {archetype_id}")
-        else:
-            archetype_label = "Unclassified profile"
-
-        why = html.escape(
-            clean_text(row.get("why_similar"))
-        )
-
-        differences = html.escape(
-            clean_text(row.get("main_differences"))
-        )
-
-        local_image_path = get_local_image_path(
-            sofifa_id_from_image_url(row.get("image_url"))
-        )
-
-        image_source = image_data_uri(
-            local_image_path
-        )
-
-        if not image_source:
-            image_source = valid_image_url(
-                row.get("image_url")
-            )
-
-        initials = html.escape(
-            player_initials(raw_name)
-        )
-
-        if image_source:
-            safe_image_source = html.escape(
-                image_source,
-                quote=True,
-            )
-
-            image_html = (
-                '<div class="ewc-player-image-wrap">'
-                f'<img class="ewc-player-image" '
-                f'src="{safe_image_source}" '
-                f'alt="{name} player portrait" '
-                'loading="lazy" '
-                'referrerpolicy="no-referrer">'
-                "</div>"
-            )
-        else:
-            image_html = (
-                '<div class="ewc-player-image-wrap">'
-                '<div class="ewc-player-image-placeholder">'
-                f"{initials}"
-                "</div>"
-                "</div>"
-            )
-
-        similarity = pd.to_numeric(
-            pd.Series([row.get("similarity")]),
-            errors="coerce",
-        ).iloc[0]
-
-        score = (
-            f"{float(similarity) * 100:.1f}%"
-            if pd.notna(similarity)
-            else ""
-        )
-
-        explanation_html = ""
-
-        if why:
-            explanation_html += (
-                f'<div class="ewc-player-why">{why}</div>'
-            )
-
-        if differences:
-            explanation_html += (
-                '<div class="ewc-player-differences">'
-                f"{differences}"
-                "</div>"
-            )
-
-        score_html = (
-            '<div class="ewc-score-wrap">'
-            f'<div class="ewc-score-label">{html.escape(score_label)}</div>'
-            f'<div class="ewc-score">{score}</div>'
-            "</div>"
-            if score
-            else ""
-        )
-
-        card_html = (
-            '<article class="ewc-player-card">'
-            '<div class="ewc-player-card-layout">'
-            f"{image_html}"
-            '<div class="ewc-player-content">'
-            '<div class="ewc-player-top">'
-            "<div>"
-            f'<div class="ewc-player-name">{flag} {name}</div>'
-            f'<div class="ewc-player-meta">{season} · {club}</div>'
-            f'<div class="ewc-player-meta">{nation} · {position}</div>'
-            "</div>"
-            f"{score_html}"
-            "</div>"
-            '<div class="ewc-pill-row">'
-            f'<span class="ewc-pill">Overall {overall}</span>'
-            f'<span class="ewc-pill">Age {age}</span>'
-            f'<span class="ewc-pill">{archetype_label}</span>'
-            "</div>"
-            f"{explanation_html}"
-            "</div>"
-            "</div>"
-            "</article>"
-        )
-
-        cards.append(card_html)
+    cards = [
+        _build_card_html(row, score_label)
+        for _, row in df.head(max_cards).iterrows()
+    ]
 
     grid_html = (
         '<div class="ewc-card-grid">'
@@ -353,5 +355,35 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8, score_label: str = "DNA M
 
     st.markdown(
         grid_html,
+        unsafe_allow_html=True,
+    )
+
+
+def dna_pathway(rows: list[pd.Series], step_labels: list[str] | None = None) -> None:
+    """Render a vertical chain of player cards connected by arrows.
+
+    The first row is treated as the starting point (no DNA Match badge);
+    each subsequent row is expected to carry a "similarity" value against
+    the row before it, which _build_card_html renders as the score badge.
+    """
+    if not rows:
+        st.info("No pathway to show.")
+        return
+
+    blocks: list[str] = []
+
+    for i, row in enumerate(rows):
+        if step_labels and i < len(step_labels):
+            blocks.append(
+                f'<div class="ewc-pathway-step-label">{html.escape(step_labels[i])}</div>'
+            )
+
+        blocks.append(_build_card_html(row, score_label="DNA Match"))
+
+        if i < len(rows) - 1:
+            blocks.append('<div class="ewc-pathway-connector">&darr;</div>')
+
+    st.markdown(
+        '<div class="ewc-pathway">' + "".join(blocks) + "</div>",
         unsafe_allow_html=True,
     )
