@@ -516,7 +516,115 @@ elif page == "Archetypes":
     if archetypes.empty:
         st.info("No archetype summary found.")
     else:
-        st.dataframe(archetypes, width="stretch")
+        archetype_order = archetypes.sort_values(
+            "player_count", ascending=False
+        )["archetype_name"].tolist()
+
+        selected_archetype_name = st.selectbox("Choose an archetype", archetype_order)
+
+        archetype_row = archetypes.loc[
+            archetypes["archetype_name"].eq(selected_archetype_name)
+        ].iloc[0]
+
+        st.markdown(
+            "<div class='ewc-callout'>"
+            f"{html.escape(str(archetype_row.get('definition', '')))}"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+
+        key_traits = [
+            trait.strip()
+            for trait in str(archetype_row.get("key_traits", "")).split(",")
+            if trait.strip()
+        ]
+
+        if key_traits:
+            trait_pills = "".join(
+                f'<span class="ewc-pill">{html.escape(trait)}</span>'
+                for trait in key_traits
+            )
+            st.markdown(
+                f"<div style='margin-bottom:1rem;'>{trait_pills}</div>",
+                unsafe_allow_html=True,
+            )
+
+        metrics_grid([
+            ("Players", f"{int(archetype_row['player_count']):,}", "Player-seasons in this archetype"),
+            ("Avg overall", f"{float(archetype_row['avg_overall']):.1f}", "Across all seasons"),
+        ])
+
+        radar_attrs = ["pace", "shooting", "passing", "dribbling", "defending", "physic"]
+        radar_values = [archetype_row.get(f"avg_{attr}") for attr in radar_attrs]
+
+        if all(pd.notna(value) for value in radar_values):
+            radar_df = pd.DataFrame({"attribute": radar_attrs, "value": radar_values})
+
+            fig = px.line_polar(
+                radar_df,
+                r="value",
+                theta="attribute",
+                line_close=True,
+                range_r=[0, 100],
+            )
+
+            fig.update_layout(
+                template="plotly_dark",
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                height=400,
+            )
+
+            st.plotly_chart(fig, width="stretch")
+        else:
+            st.caption(
+                "No attribute radar for this archetype -- goalkeepers use a "
+                "different rating set than pace/shooting/passing/dribbling/defending/physic."
+            )
+
+        cluster_players = players[
+            players["archetype_id"].eq(archetype_row["archetype_id"])
+        ].copy()
+
+        max_season = pd.to_numeric(players["season_year"], errors="coerce").max()
+        recent_cutoff = max_season - 3
+
+        st.subheader("Best modern examples")
+        st.caption(f"Peak season-{int(recent_cutoff)} onward, by overall rating.")
+
+        best_pool = cluster_players[
+            pd.to_numeric(cluster_players["season_year"], errors="coerce").ge(recent_cutoff)
+        ]
+
+        best_examples = (
+            best_pool.sort_values("overall", ascending=False)
+            .drop_duplicates("name_key")
+            .head(5)
+        )
+
+        player_cards(best_examples, max_cards=5)
+
+        st.subheader("Emerging examples")
+        st.caption(f"FIFA {int(max_season) - 2000}, age 22 or under, by potential.")
+
+        emerging_pool = cluster_players[
+            pd.to_numeric(cluster_players["season_year"], errors="coerce").eq(max_season)
+            & pd.to_numeric(cluster_players["age"], errors="coerce").le(22)
+        ]
+
+        emerging_examples = (
+            emerging_pool.sort_values("potential", ascending=False)
+            .drop_duplicates("name_key")
+            .head(5)
+        )
+
+        if emerging_examples.empty:
+            st.info("No emerging (age 22 or under) examples found for this archetype in the latest season.")
+        else:
+            player_cards(emerging_examples, max_cards=5)
+
+        with st.expander("Show full archetype table"):
+            st.dataframe(archetypes, width="stretch")
 
 else:
     st.header("Method & caveats")

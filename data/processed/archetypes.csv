@@ -1,25 +1,25 @@
-archetype_id,archetype_name,player_count,avg_overall,example_players
-0,Disciplined Defensive Midfielder,8374,74.08,"Rodri, J. Bellingham, F. Valverde, J. Kimmich, A. Hakimi, Vitinha, L. Modrić, Pedri"
-1,Clinical Winger,1345,75.5,"A. Griezmann, C. Eriksen, Theo Hernández, Roberto Firmino, İlkay Gündoğan, F. de Jong, L. Modrić, Bernardo Silva"
-2,Pacey Keeper,1659,75.07,"M. Neuer, De Gea, M. Neuer, T. Courtois, T. Courtois, G. Donnarumma, Alisson, G. Buffon"
-3,Disciplined Creative Defensive Midfielder,1125,76.46,"M. Hummels, N. Kanté, Casemiro, Casemiro, Sergio Busquets, M. Hummels, N. Kanté, Casemiro"
-4,Ball-Carrying Winger,161,78.42,"L. Messi, L. Messi, L. Messi, L. Messi, Neymar Jr, Rodri, K. De Bruyne, Neymar Jr"
-5,Disciplined Centre Back,845,75.87,"Sergio Ramos, D. Godín, Sergio Ramos, Sergio Ramos, G. Chiellini, Virgil van Dijk, Thiago Silva, D. Godín"
-6,Clinical Keeper,884,77.64,"M. Neuer, De Gea, J. Oblak, J. Oblak, J. Oblak, J. Oblak, M. Neuer, M. ter Stegen"
-7,Disciplined Physical Centre Back,3823,73.3,"Gabriel, G. Chiellini, Pepe, D. Godín, J. Tah, G. Chiellini, Naldo, A. Barzagli"
-8,Clinical Creative Winger,2258,75.11,"Aitana Bonmatí, Caroline Graham Hansen, Alexia Putellas, Sam Kerr, Sophia Smith, Ada Hegerberg, Mapi León, Marie Katoto"
-9,Clinical Striker,2930,73.6,"E. Haaland, Z. Ibrahimović, Z. Ibrahimović, Z. Ibrahimović, H. Kane, R. Lewandowski, G. Higuaín, Z. Ibrahimović"
-10,Creative Midfielder,769,77.17,"L. Modrić, L. Modrić, Jude Bellingham, Martin Ødegaard, P. Dybala, Bruno Fernandes, Phil Foden, P. Pogba"
-11,Disciplined Physical Pacey Centre Back,1322,76.29,"V. van Dijk, K. Koulibaly, V. van Dijk, G. Chiellini, K. Koulibaly, L. Bonucci, J. Boateng, Thiago Silva"
-12,Clinical Ball-Carrying Striker,278,79.21,"Cristiano Ronaldo, Cristiano Ronaldo, L. Messi, Cristiano Ronaldo, R. Lewandowski, Cristiano Ronaldo, L. Suárez, K. Mbappé"
-13,Clinical Ball-Carrying Physical Striker,860,76.65,"Cristiano Ronaldo, M. Salah, H. Kane, G. Higuaín, A. Griezmann, H. Kane, Lautaro Martínez, H. Kane"
-14,Disciplined Physical Pacey Creative Centre Back,5115,73.44,"J. Boateng, V. van Dijk, Sergio Ramos, Thiago Silva, Irene Paredes, Thiago Silva, A. Bastoni, M. Hummels"
-15,Creative Winger,496,77.94,"K. De Bruyne, E. Hazard, K. De Bruyne, Neymar Jr, Vini Jr., Kevin De Bruyne, T. Kroos, T. Kroos"
-16,Pacey Winger,4434,74.01,"Cristiano Ronaldo, Cristiano Ronaldo, L. Messi, L. Suárez, Cristiano Ronaldo, K. Mbappé, M. Salah, R. Lewandowski"
-17,Pacey Fullback,917,76.22,"N. Kanté, A. Robertson, João Cancelo, Carvajal, Alex Sandro, Alex Sandro, D. Alaba, Azpilicueta"
-18,Disciplined Fullback,1901,75.03,"Bernardo Silva, Federico Valverde, Ederson, Fabinho, Alessandro Bastoni, Marcos Llorente, M. Škriniar, Fabinho"
-19,Creative Defensive Midfielder,511,76.14,"V. van Dijk, N. Kanté, L. Modrić, G. Chiellini, Sergio Ramos, Sergio Ramos, Thiago, T. Kroos"
-20,Ball-Carrying Pacey Winger,540,77.61,"E. Hazard, S. Mané, Isco, R. Sterling, E. Hazard, R. Sterling, A. Robben, S. Mané"
-21,Clinical Ball-Carrying Pacey Striker,6,77.67,"A. Ljajić, Mariano, Mariano, M. Diagne, Trezeguet, S. Okaka"
-22,Pacey Clinical Keeper,1494,73.15,"M. Neuer, P. Čech, S. Handanovič, T. Courtois, P. Čech, S. Sirigu, Casillas, S. Handanovič"
-23,Ball-Carrying Pacey Clinical Winger,3563,74.04,"L. Messi, L. Messi, Neymar, Neymar, Neymar, A. Robben, L. Suárez, A. Robben"
+archetype_id,archetype_name,definition,key_traits,player_count,avg_overall,example_players,avg_pace,avg_shooting,avg_passing,avg_dribbling,avg_defending,avg_physic
+0,Disciplined Defensive Midfielder,A Defensive Midfielder defined by defensive discipline and elite passing range.,"Defending, Passing, Dribbling",8374,74.08,"Rodri, J. Bellingham, F. Valverde, J. Kimmich, A. Hakimi, Vitinha, L. Modrić, Pedri",70.1,63.8,71.0,72.5,67.8,71.9
+1,Clinical Winger,A Winger defined by clinical finishing and close control and ball-carrying.,"Shooting, Dribbling, Pace",1345,75.5,"A. Griezmann, C. Eriksen, Theo Hernández, Roberto Firmino, İlkay Gündoğan, F. de Jong, L. Modrić, Bernardo Silva",75.5,71.3,69.5,76.3,44.4,66.3
+2,Reliable Keeper,A Keeper in the reliable tier by overall rating. Outfield attributes like pace and shooting don't apply to goalkeepers.,"Overall, Potential, Age",1659,75.07,"M. Neuer, De Gea, M. Neuer, T. Courtois, T. Courtois, G. Donnarumma, Alisson, G. Buffon",,,,,,
+3,Disciplined Creative Defensive Midfielder,A Defensive Midfielder defined by defensive discipline and elite passing range.,"Defending, Passing, Physic",1125,76.46,"M. Hummels, N. Kanté, Casemiro, Casemiro, Sergio Busquets, M. Hummels, N. Kanté, Casemiro",65.8,61.5,71.2,72.9,71.0,73.6
+4,Ball-Carrying Winger,A Winger defined by close control and ball-carrying and elite passing range.,"Dribbling, Passing, Shooting",161,78.42,"L. Messi, L. Messi, L. Messi, L. Messi, Neymar Jr, Rodri, K. De Bruyne, Neymar Jr",75.8,71.6,73.6,78.9,47.1,66.6
+5,Disciplined Centre Back,A Centre Back defined by defensive discipline and physical dominance.,"Defending, Physic, Pace",845,75.87,"Sergio Ramos, D. Godín, Sergio Ramos, Sergio Ramos, G. Chiellini, Virgil van Dijk, Thiago Silva, D. Godín",60.4,43.8,57.1,58.9,75.4,76.0
+6,Elite Keeper,A Keeper in the elite tier by overall rating. Outfield attributes like pace and shooting don't apply to goalkeepers.,"Overall, Potential, Age",884,77.64,"M. Neuer, De Gea, J. Oblak, J. Oblak, J. Oblak, J. Oblak, M. Neuer, M. ter Stegen",76.2,73.0,71.7,77.6,45.6,75.5
+7,Disciplined Physical Centre Back,A Centre Back defined by defensive discipline and physical dominance.,"Defending, Physic, Pace",3823,73.3,"Gabriel, G. Chiellini, Pepe, D. Godín, J. Tah, G. Chiellini, Naldo, A. Barzagli",54.3,40.4,52.2,51.6,73.8,76.2
+8,Clinical Creative Winger,A Winger defined by clinical finishing and elite passing range.,"Shooting, Passing, Dribbling",2258,75.11,"Aitana Bonmatí, Caroline Graham Hansen, Alexia Putellas, Sam Kerr, Sophia Smith, Ada Hegerberg, Mapi León, Marie Katoto",72.9,68.8,71.0,74.7,54.5,69.7
+9,Clinical Striker,A Striker defined by clinical finishing and physical dominance.,"Shooting, Physic, Dribbling",2930,73.6,"E. Haaland, Z. Ibrahimović, Z. Ibrahimović, Z. Ibrahimović, H. Kane, R. Lewandowski, G. Higuaín, Z. Ibrahimović",67.7,73.5,59.2,69.2,33.0,73.1
+10,Creative Midfielder,A Midfielder defined by elite passing range and close control and ball-carrying.,"Passing, Dribbling, Shooting",769,77.17,"L. Modrić, L. Modrić, Jude Bellingham, Martin Ødegaard, P. Dybala, Bruno Fernandes, Phil Foden, P. Pogba",72.1,69.7,75.0,77.2,57.7,67.5
+11,Disciplined Physical Pacey Centre Back,A Centre Back defined by defensive discipline and physical dominance.,"Defending, Physic, Pace",1322,76.29,"V. van Dijk, K. Koulibaly, V. van Dijk, G. Chiellini, K. Koulibaly, L. Bonucci, J. Boateng, Thiago Silva",63.3,44.0,59.9,62.2,76.1,76.1
+12,Clinical Ball-Carrying Striker,A Striker defined by clinical finishing and close control and ball-carrying.,"Shooting, Dribbling, Pace",278,79.21,"Cristiano Ronaldo, Cristiano Ronaldo, L. Messi, Cristiano Ronaldo, R. Lewandowski, Cristiano Ronaldo, L. Suárez, K. Mbappé",75.1,77.6,67.7,77.0,38.1,72.3
+13,Clinical Ball-Carrying Physical Striker,A Striker defined by clinical finishing and close control and ball-carrying.,"Shooting, Dribbling, Physic",860,76.65,"Cristiano Ronaldo, M. Salah, H. Kane, G. Higuaín, A. Griezmann, H. Kane, Lautaro Martínez, H. Kane",72.9,75.4,64.6,73.9,37.8,72.4
+14,Disciplined Physical Pacey Creative Centre Back,A Centre Back defined by defensive discipline and physical dominance.,"Defending, Physic, Pace",5115,73.44,"J. Boateng, V. van Dijk, Sergio Ramos, Thiago Silva, Irene Paredes, Thiago Silva, A. Bastoni, M. Hummels",70.4,45.6,61.7,64.7,72.5,74.4
+15,Creative Winger,A Winger defined by elite passing range and close control and ball-carrying.,"Passing, Dribbling, Shooting",496,77.94,"K. De Bruyne, E. Hazard, K. De Bruyne, Neymar Jr, Vini Jr., Kevin De Bruyne, T. Kroos, T. Kroos",75.2,71.9,74.2,78.6,47.0,65.4
+16,Pacey Winger,A Winger defined by electric pace and clinical finishing.,"Pace, Shooting, Dribbling",4434,74.01,"Cristiano Ronaldo, Cristiano Ronaldo, L. Messi, L. Suárez, Cristiano Ronaldo, K. Mbappé, M. Salah, R. Lewandowski",80.1,70.7,68.4,75.7,37.7,65.9
+17,Pacey Fullback,A Fullback defined by electric pace and defensive discipline.,"Pace, Defending, Dribbling",917,76.22,"N. Kanté, A. Robertson, João Cancelo, Carvajal, Alex Sandro, Alex Sandro, D. Alaba, Azpilicueta",78.8,58.7,70.0,74.3,69.1,71.2
+18,Disciplined Fullback,A Fullback defined by defensive discipline and elite passing range.,"Defending, Passing, Dribbling",1901,75.03,"Bernardo Silva, Federico Valverde, Ederson, Fabinho, Alessandro Bastoni, Marcos Llorente, M. Škriniar, Fabinho",70.0,60.7,69.0,72.2,67.0,71.9
+19,Creative Defensive Midfielder,A Defensive Midfielder defined by elite passing range and close control and ball-carrying.,"Passing, Dribbling, Shooting",511,76.14,"V. van Dijk, N. Kanté, L. Modrić, G. Chiellini, Sergio Ramos, Sergio Ramos, Thiago, T. Kroos",70.9,65.9,70.1,74.2,56.8,68.9
+20,Ball-Carrying Pacey Winger,A Winger defined by close control and ball-carrying and electric pace.,"Dribbling, Pace, Shooting",540,77.61,"E. Hazard, S. Mané, Isco, R. Sterling, E. Hazard, R. Sterling, A. Robben, S. Mané",83.2,71.4,71.7,80.3,42.1,63.6
+21,Clinical Ball-Carrying Pacey Striker,A Striker defined by clinical finishing and close control and ball-carrying.,"Shooting, Dribbling, Pace",6,77.67,"A. Ljajić, Mariano, Mariano, M. Diagne, Trezeguet, S. Okaka",74.7,73.7,66.7,73.8,41.8,72.0
+22,Development Keeper,A Keeper in the development tier by overall rating. Outfield attributes like pace and shooting don't apply to goalkeepers.,"Overall, Potential, Age",1494,73.15,"M. Neuer, P. Čech, S. Handanovič, T. Courtois, P. Čech, S. Sirigu, Casillas, S. Handanovič",,,,,,
+23,Ball-Carrying Pacey Clinical Winger,A Winger defined by close control and ball-carrying and electric pace.,"Dribbling, Pace, Shooting",3563,74.04,"L. Messi, L. Messi, Neymar, Neymar, Neymar, A. Robben, L. Suárez, A. Robben",78.3,68.1,70.3,77.1,37.3,57.4
