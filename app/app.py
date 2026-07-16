@@ -129,7 +129,7 @@ with st.sidebar:
     st.markdown("---")
     page = st.radio(
         "Navigate",
-        ["Successor Finder", "Compare Players", "DNA Map", "Legend Score", "Archetypes", "Method"],
+        ["Successor Finder", "Compare Players", "Evolution", "DNA Map", "Legend Score", "Archetypes", "Method"],
         label_visibility="collapsed",
     )
     st.markdown("---")
@@ -453,6 +453,171 @@ elif page == "Compare Players":
     )
 
     st.plotly_chart(fig, width="stretch")
+
+elif page == "Evolution":
+    st.header("How a player's football DNA has evolved")
+
+    st.markdown(
+        "<div class='ewc-callout'>Track a single player across FIFA editions to see how "
+        "their overall rating, attributes, archetype and football DNA have shifted over "
+        "time. Some editions may be missing for a player if they weren't in the dataset "
+        "that season.</div>",
+        unsafe_allow_html=True,
+    )
+
+    season_counts = players.groupby("name_key")["season_year"].nunique()
+    eligible_name_keys = season_counts[season_counts.ge(2)].index
+
+    timeline_candidates = players[players["name_key"].isin(eligible_name_keys)].copy()
+
+    player_lookup = (
+        timeline_candidates.sort_values("season_year")
+        .groupby("name_key")
+        .tail(1)[["name_key", "short_name", "nationality_name"]]
+        .copy()
+    )
+
+    player_lookup["display_label"] = (
+        player_lookup["short_name"].astype(str)
+        + " — "
+        + player_lookup["nationality_name"].fillna("").astype(str)
+    )
+
+    player_lookup = player_lookup.sort_values("display_label")
+
+    default_index = 0
+    default_matches = player_lookup[
+        player_lookup["short_name"].astype(str).str.contains("Saka", na=False)
+    ]
+
+    if not default_matches.empty:
+        display_labels = player_lookup["display_label"].tolist()
+        target_label = default_matches.iloc[0]["display_label"]
+
+        if target_label in display_labels:
+            default_index = display_labels.index(target_label)
+
+    selected_evolution_label = st.selectbox(
+        "Choose a player",
+        player_lookup["display_label"],
+        index=default_index,
+    )
+
+    selected_name_key = player_lookup.loc[
+        player_lookup["display_label"].eq(selected_evolution_label), "name_key"
+    ].iloc[0]
+
+    timeline = (
+        players[players["name_key"].eq(selected_name_key)]
+        .sort_values(["season_year", "overall"], ascending=[True, False])
+        .drop_duplicates("season_year", keep="first")
+        .reset_index(drop=True)
+    )
+
+    if len(timeline) < 2:
+        st.info("Not enough seasons on record to show an evolution timeline for this player.")
+    else:
+        rating_long = timeline.melt(
+            id_vars="season_label",
+            value_vars=["overall", "potential"],
+            var_name="metric",
+            value_name="value",
+        )
+
+        fig_rating = px.line(
+            rating_long,
+            x="season_label",
+            y="value",
+            color="metric",
+            markers=True,
+            title="Overall & potential by FIFA edition",
+        )
+
+        fig_rating.update_layout(
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+        )
+
+        st.plotly_chart(fig_rating, width="stretch")
+
+        attr_cols = ["pace", "shooting", "passing", "dribbling", "defending", "physic"]
+
+        attr_long = timeline.melt(
+            id_vars="season_label",
+            value_vars=[c for c in attr_cols if c in timeline.columns],
+            var_name="attribute",
+            value_name="value",
+        )
+
+        fig_attrs = px.line(
+            attr_long,
+            x="season_label",
+            y="value",
+            color="attribute",
+            markers=True,
+            title="Attribute development",
+        )
+
+        fig_attrs.update_layout(
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            yaxis_range=[0, 100],
+        )
+
+        st.plotly_chart(fig_attrs, width="stretch")
+
+        timeline_emb_cols = [c for c in timeline.columns if c.startswith("emb_")]
+
+        if timeline_emb_cols and timeline[timeline_emb_cols].notna().all(axis=None):
+            baseline_vector = timeline.iloc[0][timeline_emb_cols].to_numpy(float).reshape(1, -1)
+            current_vectors = timeline[timeline_emb_cols].to_numpy(float)
+            dna_similarity = cosine_similarity(baseline_vector, current_vectors).ravel() * 100
+            timeline["dna_similarity_to_debut"] = dna_similarity
+
+            debut_label = timeline.iloc[0]["season_label"]
+
+            fig_dna = px.line(
+                timeline,
+                x="season_label",
+                y="dna_similarity_to_debut",
+                markers=True,
+                title=f"Football DNA similarity to {debut_label} debut",
+                range_y=[0, 100],
+            )
+
+            fig_dna.update_layout(
+                template="plotly_dark",
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+            )
+
+            st.plotly_chart(fig_dna, width="stretch")
+
+        archetype_journey = []
+        previous_archetype = None
+
+        for _, row in timeline.iterrows():
+            current_archetype = row.get("archetype_name")
+
+            if pd.isna(current_archetype):
+                continue
+
+            if current_archetype != previous_archetype:
+                archetype_journey.append(f"{row['season_label']}: {current_archetype}")
+                previous_archetype = current_archetype
+
+        if archetype_journey:
+            st.markdown(
+                "<div class='ewc-callout'>🧬 Archetype journey: "
+                + " &rarr; ".join(html.escape(step) for step in archetype_journey)
+                + "</div>",
+                unsafe_allow_html=True,
+            )
+
+        st.subheader("Career snapshots")
+        player_cards(timeline, max_cards=len(timeline))
 
 elif page == "DNA Map":
     st.header("Football DNA map")
