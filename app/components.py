@@ -5,6 +5,7 @@ from pathlib import Path
 from textwrap import dedent
 import base64
 import html
+import re
 
 import pandas as pd
 import streamlit as st
@@ -47,6 +48,15 @@ def valid_image_url(value: object) -> str:
         return ""
 
     return url
+
+
+_SOFIFA_ID_PATTERN = re.compile(r"/players/(\d+)/(\d+)/")
+
+
+def sofifa_id_from_image_url(value: object) -> str:
+    """Recover the numeric SoFIFA id embedded in a cdn.sofifa.net image URL."""
+    match = _SOFIFA_ID_PATTERN.search(clean_text(value))
+    return f"{match.group(1)}{match.group(2)}" if match else ""
 
 
 def player_initials(name: str) -> str:
@@ -235,7 +245,7 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
         )
 
         local_image_path = get_local_image_path(
-            row.get("sofifa_id")
+            sofifa_id_from_image_url(row.get("image_url"))
         )
 
         image_source = image_data_uri(
@@ -262,7 +272,8 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
                 f'<img class="ewc-player-image" '
                 f'src="{safe_image_source}" '
                 f'alt="{name} player portrait" '
-                'loading="lazy">'
+                'loading="lazy" '
+                'referrerpolicy="no-referrer">'
                 "</div>"
             )
         else:
