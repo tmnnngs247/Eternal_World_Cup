@@ -5,6 +5,8 @@ import re
 
 import pandas as pd
 
+from config import FBREF_FEATURE_PATTERNS
+
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW = ROOT / "data" / "raw"
@@ -244,6 +246,28 @@ def standardise_fifa_file(path: Path) -> pd.DataFrame:
     return out
 
 
+def load_fbref_performance() -> pd.DataFrame | None:
+    """Load per-90 FBRef performance stats, keyed to match players_master rows."""
+    path = RAW / "fifa_fbref_merged.csv"
+
+    if not path.exists():
+        print(f"Missing: {path.name} (no FBRef performance data)")
+        return None
+
+    fbref = pd.read_csv(path, low_memory=False)
+
+    fbref["name_key"] = clean_key(fbref["short_name"])
+    fbref["season_year"] = 2000 + pd.to_numeric(fbref["fifa_version"], errors="coerce")
+
+    feature_cols = [c for c in FBREF_FEATURE_PATTERNS if c in fbref.columns]
+
+    fbref = fbref[["name_key", "season_year"] + feature_cols].dropna(subset=["season_year"])
+    fbref = fbref.drop_duplicates(subset=["name_key", "season_year"], keep="first")
+    fbref["season_year"] = fbref["season_year"].astype(int)
+
+    return fbref.rename(columns={c: f"perf_{c}" for c in feature_cols})
+
+
 def main() -> None:
     fifa_files = sorted(
         list(RAW.glob("players_*.csv"))
@@ -285,6 +309,14 @@ def main() -> None:
         keep="first",
     )
 
+    fbref = load_fbref_performance()
+    has_fbref = None
+
+    if fbref is not None:
+        players = players.merge(fbref, on=["name_key", "season_year"], how="left")
+        perf_cols = [c for c in players.columns if c.startswith("perf_")]
+        has_fbref = players[perf_cols].notna().any(axis=1) if perf_cols else None
+
     output_path = PROCESSED / "players_master.csv"
 
     players.to_csv(
@@ -304,6 +336,11 @@ def main() -> None:
     print(f"Columns: {len(players.columns):,}")
     print(f"Rows with image URLs: {valid_image_urls.sum():,}")
     print(f"Image coverage: {valid_image_urls.mean():.1%}")
+
+    if has_fbref is not None:
+        print(f"Rows with FBRef performance data: {has_fbref.sum():,}")
+        print(f"FBRef coverage: {has_fbref.mean():.1%}")
+
     print(f"Output: {output_path}")
 
 
