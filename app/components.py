@@ -236,14 +236,6 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
         else:
             archetype_label = "Unclassified profile"
 
-        has_fbref = bool(row.get("has_fbref")) if pd.notna(row.get("has_fbref")) else False
-
-        confidence_pill = (
-            '<span class="ewc-pill ewc-pill-confidence">📊 Match-tracked</span>'
-            if has_fbref
-            else ""
-        )
-
         why = html.escape(
             clean_text(row.get("why_similar"))
         )
@@ -335,7 +327,6 @@ def player_cards(df: pd.DataFrame, max_cards: int = 8) -> None:
             f'<span class="ewc-pill">Overall {overall}</span>'
             f'<span class="ewc-pill">Age {age}</span>'
             f'<span class="ewc-pill">{archetype_label}</span>'
-            f"{confidence_pill}"
             "</div>"
             f"{explanation_html}"
             "</div>"
