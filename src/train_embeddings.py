@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 import json
+import joblib
 import numpy as np
 import pandas as pd
-from sklearn.decomposition import PCA
 from sklearn.impute import SimpleImputer
+from sklearn.neural_network import MLPRegressor
 from sklearn.preprocessing import StandardScaler
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,6 +23,21 @@ BASE_FEATURES = [
 ]
 
 
+def encode_bottleneck(mlp: MLPRegressor, X: np.ndarray, bottleneck_layer: int) -> np.ndarray:
+    """Forward-propagate through the encoder half of a trained autoencoder MLP.
+
+    MLPRegressor doesn't expose intermediate activations, so this replays its
+    own forward pass (weights @ input + bias, then relu) up to and including
+    the bottleneck hidden layer, using the same activation on every hidden
+    layer that MLPRegressor applies internally.
+    """
+    activation = X
+    for i in range(bottleneck_layer + 1):
+        activation = activation @ mlp.coefs_[i] + mlp.intercepts_[i]
+        activation = np.maximum(activation, 0)
+    return activation
+
+
 def main():
     players = pd.read_csv(PROCESSED / "players_master.csv")
     perf_cols = [c for c in players.columns if c.startswith("perf_")]
@@ -35,8 +51,27 @@ def main():
     scaler = StandardScaler()
     X = scaler.fit_transform(imputer.fit_transform(numeric))
     n_components = min(32, X.shape[1], max(2, X.shape[0] - 1))
-    pca = PCA(n_components=n_components, random_state=42)
-    emb = pca.fit_transform(X)
+
+    hidden_layer_sizes = (128, 64, n_components, 64, 128)
+    bottleneck_layer = 2  # index into hidden_layer_sizes / mlp.coefs_ for the (128, 64, n_components) encoder half
+
+    autoencoder = MLPRegressor(
+        hidden_layer_sizes=hidden_layer_sizes,
+        activation="relu",
+        solver="adam",
+        alpha=1e-4,
+        learning_rate_init=1e-3,
+        max_iter=300,
+        early_stopping=True,
+        n_iter_no_change=15,
+        validation_fraction=0.1,
+        random_state=42,
+    )
+    autoencoder.fit(X, X)
+
+    emb = encode_bottleneck(autoencoder, X, bottleneck_layer)
+    reconstruction_mse = float(np.mean((autoencoder.predict(X) - X) ** 2))
+
     out = players.copy()
     for i in range(n_components):
         out[f"emb_{i:02d}"] = emb[:, i]
@@ -56,9 +91,28 @@ def main():
     keep_cols = [c for c in keep_cols if c in deployed.columns] + [c for c in BASE_FEATURES if c in deployed.columns] + [f"emb_{i:02d}" for i in range(n_components)]
     deployed = deployed.loc[:, list(dict.fromkeys(keep_cols))]
     deployed.to_csv(PROCESSED / "player_embeddings.csv", index=False)
-    meta = {"method":"PCA baseline over standardised FIFA/FBRef-style features", "n_components": int(n_components), "feature_cols": feature_cols, "explained_variance": pca.explained_variance_ratio_.tolist(), "deployed_rows": int(len(deployed))}
+
+    pd.DataFrame({
+        "epoch": range(1, len(autoencoder.loss_curve_) + 1),
+        "reconstruction_loss": autoencoder.loss_curve_,
+    }).to_csv(MODELS / "autoencoder_training_loss.csv", index=False)
+
+    joblib.dump(
+        {"autoencoder": autoencoder, "imputer": imputer, "scaler": scaler, "feature_cols": feature_cols, "bottleneck_layer": bottleneck_layer},
+        MODELS / "autoencoder.joblib",
+    )
+
+    meta = {
+        "method": "Autoencoder (MLP, relu bottleneck) over standardised FIFA/FBRef-style features",
+        "architecture": list(hidden_layer_sizes),
+        "n_components": int(n_components),
+        "feature_cols": feature_cols,
+        "reconstruction_mse": reconstruction_mse,
+        "training_iterations": int(autoencoder.n_iter_),
+        "deployed_rows": int(len(deployed)),
+    }
     (MODELS / "embedding_metadata.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
-    print(f"Built embeddings: {out.shape}, components={n_components}")
+    print(f"Built embeddings: {out.shape}, components={n_components}, reconstruction_mse={reconstruction_mse:.4f}, iterations={autoencoder.n_iter_}")
 
 if __name__ == "__main__":
     main()
