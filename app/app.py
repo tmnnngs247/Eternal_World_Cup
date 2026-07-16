@@ -132,8 +132,8 @@ with st.sidebar:
         label_visibility="collapsed",
     )
     st.markdown("---")
-    st.success("Stable v1: real processed pipeline")
-    st.caption("Next: autoencoder training + richer 25/26 FBRef data + player images.")
+    st.success("Autoencoder embeddings live")
+    st.caption("Trained on FIFA attributes + FBRef performance data across 8 seasons.")
 
 hero()
 metrics_grid([
@@ -474,11 +474,11 @@ else:
         """
         <div class="ewc-section-card">
         <h3>What the model does</h3>
-        <p>The current stable build creates a football-DNA embedding from standardised FIFA/FBRef-style numerical player features. Similarity is calculated with cosine similarity in that embedding space.</p>
+        <p>The football-DNA embedding is produced by a trained autoencoder (a bottlenecked neural network) over standardised FIFA attribute ratings and, where available, FBRef per-90 performance stats such as xG, progressive passes and tackles. Similarity is calculated with cosine similarity in that embedding space.</p>
         <h3>What it does not do yet</h3>
-        <p>This version is not yet a fully trained autoencoder and does not predict future performance. It is a stable foundation for the real ML build: clean data, reproducible outputs and a working app shell.</p>
+        <p>FBRef performance data currently covers roughly 10% of player-seasons, concentrated in FIFA 18-25 for players FBRef tracks; the rest rely on FIFA attributes alone. This is a similarity model, not a predictive one: it does not forecast future performance.</p>
         <h3>Next upgrades</h3>
-        <p>Train an autoencoder, add richer current-season FBRef data, improve player identity matching, source Wikimedia-compatible player images and write interpretable successor explanations.</p>
+        <p>Improve player identity matching to raise FBRef coverage, broaden flag and nationality coverage, and explore predictive modelling of future performance.</p>
         </div>
         """,
         unsafe_allow_html=True,
