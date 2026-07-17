@@ -1170,17 +1170,28 @@ elif page == "DNA Map":
     if map_df.empty:
         st.warning("No players match these filters. Try widening them.")
     else:
+        hover_fields = [
+            "short_name", "club_name", "nationality_name",
+            "player_positions", "overall", "age", "archetype_name",
+        ]
+
         fig = px.scatter(
             map_df,
             x=emb_cols[0],
             y=emb_cols[1],
             color="archetype_name" if "archetype_name" in map_df else None,
-            custom_data=["player_season_id"],
-            hover_data=[
-                "short_name", "club_name", "nationality_name",
-                "overall", "age", "player_positions",
-            ],
+            custom_data=["player_season_id"] + hover_fields,
             title="Football DNA landscape",
+        )
+
+        fig.update_traces(
+            hovertemplate=(
+                "<b>%{customdata[1]}</b><br>"
+                "%{customdata[2]} · %{customdata[3]}<br>"
+                "%{customdata[4]} · Overall %{customdata[5]} · Age %{customdata[6]}<br>"
+                "%{customdata[7]}"
+                "<extra></extra>"
+            )
         )
 
         fig.update_layout(

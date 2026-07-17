@@ -5,7 +5,6 @@ from io import BytesIO
 from pathlib import Path
 from textwrap import dedent
 import base64
-import hashlib
 import html
 import re
 
@@ -73,43 +72,6 @@ def player_initials(name: str) -> str:
     initials = "".join(part[0].upper() for part in parts[:2])
     return initials or "⚽"
 
-
-# No club crest/logo imagery exists in the underlying dataset (checked both
-# the raw SoFIFA CSVs and the processed player tables) -- these synthesize a
-# lightweight monogram badge instead of a real crest.
-_CLUB_BADGE_STOPWORDS = {
-    "fc", "cf", "sc", "ac", "as", "rc", "sv", "vfl", "vfb", "fk", "ss",
-    "ssc", "us", "cd", "ud", "afc", "real", "club", "calcio", "de", "fk.",
-}
-
-_CLUB_BADGE_COLORS = [
-    "#7DD3FC", "#C084FC", "#86EFAC", "#FB7185", "#FBBF24",
-    "#F472B6", "#60A5FA", "#34D399", "#A78BFA", "#FCA5A5",
-    "#38BDF8", "#FDE047",
-]
-
-
-def club_initials(club_name: str) -> str:
-    """Compact 1-2 letter monogram for a club name, skipping common prefixes."""
-    words = [word for word in re.split(r"[\s.]+", html.unescape(club_name)) if word]
-    significant = [
-        word for word in words
-        if word.lower().strip(".") not in _CLUB_BADGE_STOPWORDS
-    ] or words
-
-    if not significant:
-        return "?"
-
-    if len(significant) == 1:
-        return significant[0][:2].upper()
-
-    return "".join(word[0].upper() for word in significant[:2])
-
-
-def club_badge_color(club_name: str) -> str:
-    """Deterministic accent color for a club, stable across reruns/processes."""
-    digest = hashlib.md5(club_name.encode("utf-8")).hexdigest()
-    return _CLUB_BADGE_COLORS[int(digest, 16) % len(_CLUB_BADGE_COLORS)]
 
 
 def get_local_image_path(value: object) -> str:
@@ -222,25 +184,14 @@ def _build_card_html(row: pd.Series, score_label: str) -> str:
         )
     )
 
-    raw_club = clean_text(
-        row.get(
-            "club_name",
-            row.get("club"),
+    club = html.escape(
+        clean_text(
+            row.get(
+                "club_name",
+                row.get("club"),
+            )
         )
     )
-
-    club = html.escape(raw_club)
-
-    club_badge_html = ""
-
-    if raw_club:
-        badge_color = club_badge_color(raw_club)
-        badge_initials = html.escape(club_initials(raw_club))
-        club_badge_html = (
-            f'<span class="ewc-club-badge" '
-            f'style="border-color:{badge_color}77;color:{badge_color};'
-            f'background:{badge_color}1F;">{badge_initials}</span>'
-        )
 
     nation = html.escape(
         clean_text(
@@ -416,7 +367,7 @@ def _build_card_html(row: pd.Series, score_label: str) -> str:
         '<div class="ewc-player-top">'
         "<div>"
         f'<div class="ewc-player-name">{flag} {name}</div>'
-        f'<div class="ewc-player-meta">{season} · {club_badge_html}{club}</div>'
+        f'<div class="ewc-player-meta">{season} · {club}</div>'
         f'<div class="ewc-player-meta">{nation} · {position}</div>'
         "</div>"
         f"{score_html}"
