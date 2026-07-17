@@ -92,9 +92,21 @@ def get_local_image_path(value: object) -> str:
     return str(image_path)
 
 
+_IMAGE_MIME_TYPES = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".webp": "image/webp",
+}
+
+
 @lru_cache(maxsize=5000)
 def image_data_uri(path_string: str) -> str:
-    """Convert a downloaded portrait to an embeddable base64 data URI."""
+    """Convert a local image to an embeddable base64 data URI.
+
+    Streamlit doesn't reliably serve files from the app directory as plain
+    URLs once deployed, so anything rendered via raw HTML has to be inlined.
+    """
     if not path_string:
         return ""
 
@@ -103,6 +115,8 @@ def image_data_uri(path_string: str) -> str:
     if not image_path.is_file():
         return ""
 
+    mime_type = _IMAGE_MIME_TYPES.get(image_path.suffix.lower(), "image/png")
+
     try:
         encoded = base64.b64encode(
             image_path.read_bytes()
@@ -110,13 +124,25 @@ def image_data_uri(path_string: str) -> str:
     except OSError:
         return ""
 
-    return f"data:image/png;base64,{encoded}"
+    return f"data:{mime_type};base64,{encoded}"
+
+
+HERO_IMAGE_PATH = ROOT / "assets" / "football_genome_header.jpg"
 
 
 def hero() -> None:
+    hero_image_uri = image_data_uri(str(HERO_IMAGE_PATH))
+
+    hero_style = (
+        "background-image: linear-gradient(rgba(9,13,26,.87), rgba(9,13,26,.87)), "
+        f"url('{hero_image_uri}'); background-size: cover; background-position: center 12%;"
+        if hero_image_uri
+        else ""
+    )
+
     render_html(
-        """
-        <section class="ewc-hero">
+        f"""
+        <section class="ewc-hero" style="{hero_style}">
           <h1>The Eternal World Cup</h1>
           <p>
             Football refuses to say goodbye to its greats. This app uses
