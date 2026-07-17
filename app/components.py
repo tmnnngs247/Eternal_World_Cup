@@ -161,6 +161,30 @@ def metrics_grid(metrics: list[tuple[str, str, str]]) -> None:
     )
 
 
+# Thresholds checked high-to-low; first match wins. Lets the eye jump
+# straight to "this is why he's a match" instead of reading every number.
+_TRAIT_BAR_THRESHOLDS = [
+    (90, "#4ADE80"),
+    (80, "#A3E635"),
+    (70, "#FDE047"),
+    (60, "#FB923C"),
+    (0, "#F87171"),
+]
+
+
+def _trait_bar_color(pct: float) -> str:
+    for threshold, color in _TRAIT_BAR_THRESHOLDS:
+        if pct >= threshold:
+            return color
+
+    return _TRAIT_BAR_THRESHOLDS[-1][1]
+
+
+def _hex_to_rgb(value: str) -> tuple[int, int, int]:
+    value = value.lstrip("#")
+    return tuple(int(value[i:i + 2], 16) for i in range(0, 6, 2))
+
+
 def _build_card_html(row: pd.Series, score_label: str) -> str:
     raw_name = (
         clean_text(
@@ -295,7 +319,10 @@ def _build_card_html(row: pd.Series, score_label: str) -> str:
     )
 
     narrative_html = (
+        '<div class="ewc-player-verdict">'
+        '<div class="ewc-player-section-label">DNA Verdict</div>'
         f'<p class="ewc-player-narrative">{html.escape(narrative)}</p>'
+        "</div>"
         if narrative
         else ""
     )
@@ -307,13 +334,14 @@ def _build_card_html(row: pd.Series, score_label: str) -> str:
 
         for trait_label, trait_pct in trait_breakdown:
             pct = max(0.0, min(100.0, float(trait_pct)))
+            bar_color = _trait_bar_color(pct)
             bars.append(
                 '<div class="ewc-trait-row">'
                 f'<span class="ewc-trait-label">{html.escape(str(trait_label))}</span>'
                 '<span class="ewc-trait-bar">'
-                f'<span class="ewc-trait-fill" style="width:{pct:.0f}%"></span>'
+                f'<span class="ewc-trait-fill" style="width:{pct:.0f}%;background:{bar_color}"></span>'
                 "</span>"
-                f'<span class="ewc-trait-pct">{pct:.0f}%</span>'
+                f'<span class="ewc-trait-pct" style="color:{bar_color}">{pct:.0f}%</span>'
                 "</div>"
             )
 
@@ -346,7 +374,7 @@ def _build_card_html(row: pd.Series, score_label: str) -> str:
 
     if pd.notna(successor_score_value):
         explanation_html += (
-            '<div class="ewc-successor-score">Modern Successor Score: '
+            '<div class="ewc-successor-score">DNA Fit: '
             f"<strong>{successor_score_value:.1f}/10</strong></div>"
         )
 
@@ -365,7 +393,7 @@ def _build_card_html(row: pd.Series, score_label: str) -> str:
         f"{image_html}"
         '<div class="ewc-player-content">'
         '<div class="ewc-player-top">'
-        "<div>"
+        '<div class="ewc-player-identity">'
         f'<div class="ewc-player-name">{flag} {name}</div>'
         f'<div class="ewc-player-meta">{season} · {club}</div>'
         f'<div class="ewc-player-meta">{nation} · {position}</div>'
@@ -577,6 +605,7 @@ def render_card_image(row: pd.Series, score_label: str = "DNA Match") -> bytes:
 
         for trait_label, trait_pct in trait_breakdown[:6]:
             pct = max(0.0, min(100.0, float(trait_pct)))
+            bar_color = _hex_to_rgb(_trait_bar_color(pct))
             draw.text((x0, y + 2), str(trait_label), font=font_trait, fill=_EXPORT_MUTED)
             track_x0 = x0 + 110
             track_x1 = track_x0 + bar_w
@@ -584,16 +613,16 @@ def render_card_image(row: pd.Series, score_label: str = "DNA Match") -> bytes:
             fill_x1 = track_x0 + bar_w * (pct / 100.0)
 
             if fill_x1 > track_x0:
-                draw.rounded_rectangle((track_x0, y + 4, fill_x1, y + 12), radius=4, fill=_EXPORT_ACCENT)
+                draw.rounded_rectangle((track_x0, y + 4, fill_x1, y + 12), radius=4, fill=bar_color)
 
-            draw.text((track_x1 + 12, y + 1), f"{pct:.0f}%", font=font_trait, fill=_EXPORT_TEXT)
+            draw.text((track_x1 + 12, y + 1), f"{pct:.0f}%", font=font_trait, fill=bar_color)
             y += 24
 
     if pd.notna(successor_score_value):
         font_footer = _export_font(18)
         draw.text(
             (x0, 566),
-            f"Modern Successor Score: {successor_score_value:.1f}/10",
+            f"DNA Fit: {successor_score_value:.1f}/10",
             font=font_footer,
             fill=_EXPORT_MUTED,
         )

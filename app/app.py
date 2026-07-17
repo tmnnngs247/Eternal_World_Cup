@@ -130,10 +130,33 @@ NARRATIVE_LESS_PHRASES = {
     "defending": ["less defensive involvement", "a lighter defensive workload", "less positional discipline"],
 }
 
-NARRATIVE_CLOSERS = [
-    "{candidate} offers a distinct route to a similar role.",
-    "{candidate} gets there a different way.",
-    "{candidate} still lands in the same neighbourhood, just via a different path.",
+# Opening claim for the DNA Verdict, picked by similarity tier -- this is
+# the "commit to the storytelling" sentence, not a hedge-everything summary.
+NARRATIVE_TIER_OPENERS = {
+    "elite": [
+        "{candidate} isn't the next {query} -- nobody is. But strip {query}'s game down to {trait}, and this is roughly what you'd get.",
+        "{candidate} is about as close as the dataset gets to a modern {query}, built around {trait}.",
+        "Rebuild {query} around {trait} alone, and {candidate} is close to what comes out the other side.",
+    ],
+    "strong": [
+        "{candidate} occupies a genuinely similar football neighbourhood to {query}, built around {trait}.",
+        "{candidate} carries a strong dose of {query}'s DNA, anchored by {trait}.",
+        "There's a real family resemblance here -- both {candidate} and {query} lean on {trait}.",
+    ],
+    "moderate": [
+        "{candidate} is a plausible stylistic cousin of {query}, sharing {trait} even as the rest of the profile diverges.",
+        "{candidate} and {query} overlap around {trait}, without matching everywhere else.",
+    ],
+    "distant": [
+        "{candidate} is a distant echo of {query} -- {trait} links them, but the profiles part ways from there.",
+        "The connection to {query} is real but thin: mostly {trait}.",
+    ],
+}
+
+NARRATIVE_VERDICT_CLOSERS = [
+    "{candidate} sacrifices some of that for {diff}, but retains enough of the underlying profile to make the comparison stick.",
+    "The trade-off shows up in {diff}, though the core of the profile still holds together.",
+    "That said, {diff} keeps this from being a perfect match -- just a very convincing one.",
 ]
 
 NARRATIVE_FALLBACK_SHARES = [
@@ -230,12 +253,23 @@ def build_profile_comparison(candidate: pd.Series, query: pd.Series) -> dict:
     }
 
 
+def _narrative_tier(similarity: float) -> str:
+    if similarity >= 0.93:
+        return "elite"
+    if similarity >= 0.85:
+        return "strong"
+    if similarity >= 0.70:
+        return "moderate"
+    return "distant"
+
+
 def build_narrative_sentence(
     candidate_name: str,
     query_name: str,
     comparison: dict,
+    similarity: float = float("nan"),
 ) -> str:
-    """Template a scout-style sentence from the same comparison data that
+    """Template a confident 'DNA verdict' from the same comparison data that
     drives the Shares/Differences bullets -- no external model call."""
     share_keys = comparison.get("share_keys", [])
     difference_keys = comparison.get("difference_keys", [])
@@ -249,12 +283,12 @@ def build_narrative_sentence(
             )
             for key in share_keys
         ]
-        share_sentence = (
-            f"{candidate_name} shares {query_name}'s "
-            + " and ".join(share_phrases) + "."
-        )
+        tier = _narrative_tier(float(similarity)) if pd.notna(similarity) else "moderate"
+        opener = _pick_variant(
+            NARRATIVE_TIER_OPENERS[tier], (candidate_name, tier, "opener")
+        ).format(candidate=candidate_name, query=query_name, trait=share_phrases[0])
     else:
-        share_sentence = _pick_variant(
+        opener = _pick_variant(
             NARRATIVE_FALLBACK_SHARES, (candidate_name, query_name, "fallback")
         ).format(candidate=candidate_name, query=query_name)
 
@@ -272,12 +306,9 @@ def build_narrative_sentence(
                 )
             )
 
-        closer = _pick_variant(NARRATIVE_CLOSERS, (candidate_name, "closer")).format(
-            candidate=candidate_name
-        )
-        difference_sentence = (
-            "Whilst showing " + " and ".join(difference_phrases) + f", {closer}"
-        )
+        difference_sentence = _pick_variant(
+            NARRATIVE_VERDICT_CLOSERS, (candidate_name, "closer")
+        ).format(candidate=candidate_name, diff=" and ".join(difference_phrases))
 
     age_clause = ""
 
@@ -286,7 +317,7 @@ def build_narrative_sentence(
             NARRATIVE_AGE_CLAUSES, (candidate_name, "age")
         ).format(gap=age_gap, query=query_name)
 
-    return f"{share_sentence} {difference_sentence}{age_clause}".strip()
+    return f"{opener} {difference_sentence}{age_clause}".strip()
 
 
 def successor_score(similarity: float, query: pd.Series, candidate: pd.Series) -> float:
@@ -325,14 +356,15 @@ def add_similarity_reasons(res: pd.DataFrame, query: pd.Series) -> pd.DataFrame:
         trait_breakdown_column.append(comparison["trait_breakdown"])
 
         candidate_name = clean_text(row.get("short_name", row.get("player_name", "This player"))) or "This player"
-        narrative_column.append(
-            build_narrative_sentence(candidate_name, query_name, comparison)
-        )
 
         similarity_value = pd.to_numeric(
             pd.Series([row.get("similarity")]),
             errors="coerce",
         ).iloc[0]
+
+        narrative_column.append(
+            build_narrative_sentence(candidate_name, query_name, comparison, float(similarity_value))
+        )
 
         score_column.append(
             successor_score(float(similarity_value), query, row)
@@ -400,6 +432,9 @@ metrics_grid([
     ("DNA dimensions", str(len(emb_cols)), "Compressed profile space"),
     ("Archetypes", f"{players['archetype_id'].nunique() if 'archetype_id' in players.columns else 0}", "Profile clusters"),
     ("Latest player pool", f"{players['name_key'].nunique():,}", "Unique players"),
+    ("Countries", f"{players['nationality_name'].nunique():,}", "Nations on the map"),
+    ("Clubs", f"{players['club_name'].nunique():,}", "Clubs represented"),
+    ("World Cups", f"{players.loc[players['wc_apps'].notna(), 'season_year'].nunique()}", "Tournaments tracked"),
 ])
 
 players = players.copy()
@@ -1377,16 +1412,20 @@ elif page == "Archetypes":
             st.dataframe(archetypes, width="stretch")
 
 else:
-    st.header("Method & caveats")
+    st.header("How this works")
     st.markdown(
         """
         <div class="ewc-section-card">
-        <h3>What the model does</h3>
-        <p>The football-DNA embedding is produced by a trained autoencoder (a bottlenecked neural network) over standardised FIFA attribute ratings and, where available, FBRef per-90 performance stats such as xG, progressive passes and tackles. Similarity is calculated with cosine similarity in that embedding space.</p>
-        <h3>What it does not do yet</h3>
-        <p>FBRef performance data currently covers roughly 10% of player-seasons, concentrated in FIFA 18-25 for players FBRef tracks; the rest rely on FIFA attributes alone. This is a similarity model, not a predictive one: it does not forecast future performance.</p>
-        <h3>Next upgrades</h3>
-        <p>Improve player identity matching to raise FBRef coverage, broaden flag and nationality coverage, and explore predictive modelling of future performance.</p>
+        <p>Every player-season in football history gets compressed into a football DNA fingerprint -- a signature built from their attributes and playing style. Players who land in a similar region of that DNA space tend to play a similar role on the pitch, however different their nationality, era or reputation.</p>
+        <p>That's what lets us ask questions like:</p>
+        <ul>
+        <li>Who carries Lionel Messi's football DNA today?</li>
+        <li>Which modern player resembles a prime Luka Modri&#263;?</li>
+        <li>Which archetypes have quietly gone extinct?</li>
+        <li>What might football look like in 2035?</li>
+        </ul>
+        <h3>What this isn't</h3>
+        <p>This is a resemblance engine, not a crystal ball. A high DNA match means two players occupy a similar footballing profile -- it isn't a prediction that one will become as good as the other. Coverage also isn't even: detailed match-performance stats exist for only a minority of player-seasons, so older or less-tracked players lean more on their FIFA ratings alone.</p>
         </div>
         """,
         unsafe_allow_html=True,

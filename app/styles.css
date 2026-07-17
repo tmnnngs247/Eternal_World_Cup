@@ -248,9 +248,15 @@ p, li, label, span, div {
 
 .ewc-player-top {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 1rem;
+  gap: .5rem 1rem;
+}
+
+.ewc-player-identity {
+  min-width: 140px;
+  flex: 1 1 auto;
 }
 
 .ewc-player-name,
@@ -287,6 +293,7 @@ p, li, label, span, div {
   display: flex;
   flex-direction: column;
   align-items: center;
+  flex-shrink: 0;
   gap: .3rem;
 }
 
@@ -295,6 +302,7 @@ p, li, label, span, div {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .08em;
+  white-space: nowrap;
   color: var(--ewc-soft) !important;
 }
 
@@ -321,10 +329,14 @@ p, li, label, span, div {
   font-size: .9rem;
 }
 
-.ewc-player-narrative {
+.ewc-player-verdict {
   margin: .8rem 0 0 0;
   padding-top: .75rem;
   border-top: 1px solid rgba(255,255,255,.12);
+}
+
+.ewc-player-narrative {
+  margin: .3rem 0 0 0;
   font-size: .92rem;
   line-height: 1.55;
   color: var(--ewc-muted) !important;
@@ -361,13 +373,14 @@ p, li, label, span, div {
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--ewc-accent), var(--ewc-green));
+  background: var(--ewc-accent);
 }
 
 .ewc-trait-pct {
   text-align: right;
-  color: var(--ewc-muted) !important;
+  color: var(--ewc-muted);
   font-variant-numeric: tabular-nums;
+  font-weight: 700;
 }
 
 .ewc-player-shares,
@@ -495,13 +508,13 @@ ul[role="listbox"] li * {
 /* Player image cards */
 .ewc-player-card-layout {
   display: grid;
-  grid-template-columns: 140px minmax(0, 1fr);
+  grid-template-columns: 170px minmax(0, 1fr);
   gap: 1.1rem;
   align-items: stretch;
 }
 
 .ewc-player-image-wrap {
-  min-height: 190px;
+  min-height: 220px;
   overflow: hidden;
   border: 1px solid var(--ewc-border);
   border-radius: 1rem;
@@ -520,14 +533,14 @@ ul[role="listbox"] li * {
 .ewc-player-image {
   display: block;
   width: 100%;
-  height: 190px;
+  height: 220px;
   object-fit: contain;
   object-position: bottom center;
 }
 
 .ewc-player-image-placeholder {
   width: 100%;
-  height: 190px;
+  height: 220px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -549,6 +562,6 @@ ul[role="listbox"] li * {
   .ewc-player-image-wrap,
   .ewc-player-image,
   .ewc-player-image-placeholder {
-    height: 200px;
+    height: 260px;
   }
 }
