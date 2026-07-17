@@ -48,19 +48,20 @@ p, li, label, span, div {
 }
 
 .ewc-hero {
-  padding: 0;
+  position: relative;
   border: 1px solid var(--ewc-border);
   border-radius: 2rem;
   overflow: hidden;
   background: linear-gradient(135deg, rgba(35,58,87,.92), rgba(41,33,64,.92));
   box-shadow: 0 24px 80px rgba(0,0,0,.28);
+  min-height: 28rem;
+  display: flex;
+  align-items: flex-end;
 }
 
 .ewc-hero-image-wrap {
-  width: 100%;
-  aspect-ratio: 16 / 7;
-  position: relative;
-  overflow: hidden;
+  position: absolute;
+  inset: 0;
 }
 
 .ewc-hero-image {
@@ -68,18 +69,27 @@ p, li, label, span, div {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 22%;
+  object-position: center 15%;
 }
 
 .ewc-hero-image-wrap::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, rgba(11,16,32,0) 55%, rgba(11,16,32,.96) 100%);
+  background: linear-gradient(
+    to bottom,
+    rgba(9,13,26,.05) 0%,
+    rgba(9,13,26,.4) 40%,
+    rgba(9,13,26,.85) 68%,
+    rgba(9,13,26,.97) 100%
+  );
 }
 
 .ewc-hero-content {
-  padding: 2.2rem 3rem 3rem;
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 3rem;
 }
 
 .ewc-hero-content h1 {

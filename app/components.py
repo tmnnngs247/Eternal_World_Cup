@@ -147,8 +147,8 @@ def hero() -> None:
           <div class="ewc-hero-content">
             <h1>Every footballer has a DNA profile.</h1>
             <p>
-              Compare players across generations, discover future
-              successors and uncover football's hidden connections.
+              Compare generations &middot; Discover successors &middot;
+              Reveal football's hidden connections.
             </p>
           </div>
         </section>
