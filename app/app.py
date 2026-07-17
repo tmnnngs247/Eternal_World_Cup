@@ -423,6 +423,17 @@ if not emb_cols:
     st.error("No embedding columns found in data/processed/app_players.csv. Re-run the pipeline.")
     st.stop()
 
+PAGE_NAV_KEY = "page_nav_radio"
+PENDING_NAV_KEY = "_pending_page_nav"
+
+# A widget's session_state key can't be reassigned once that widget has
+# rendered in the current script run -- Streamlit raises StreamlitAPIException.
+# Jump helpers below stash the target page here and call st.rerun(); applying
+# it here, before the sidebar radio (bound to PAGE_NAV_KEY) ever instantiates,
+# is what makes the reassignment legal.
+if PENDING_NAV_KEY in st.session_state:
+    st.session_state[PAGE_NAV_KEY] = st.session_state.pop(PENDING_NAV_KEY)
+
 with st.sidebar:
     st.markdown("## 🧬 The Football Genome")
     st.caption("Football DNA, decoded.")
@@ -430,6 +441,7 @@ with st.sidebar:
     page = st.radio(
         "Navigate",
         ["Successor Finder", "Compare Players", "Evolution", "Pathways", "DNA Map", "Legend Score", "Archetypes", "Method"],
+        key=PAGE_NAV_KEY,
         label_visibility="collapsed",
     )
     st.markdown("---")
@@ -467,26 +479,78 @@ latest["display_name"] = (
     + latest["club_name"].fillna("").astype(str)
 )
 
+REFERENCE_KEY = "successor_reference_select"
+SEARCH_MODE_KEY = "successor_search_mode_select"
+COMPARE_A_KEY = "compare_player_a_select"
+COMPARE_B_KEY = "compare_player_b_select"
+
+reference_options = players.sort_values(
+    ["overall", "season_year"],
+    ascending=[False, False],
+)["display_name"].head(5000)
+
+
+def jump_to_player(name_substring: str, mode: str) -> None:
+    """Safely pre-seed the Successor Finder reference + mode and switch to it.
+
+    Only ever sets REFERENCE_KEY to a value that's actually a valid option in
+    the reference selectbox -- pre-seeding a selectbox's session_state with a
+    value outside its options list raises StreamlitAPIException.
+    """
+    matches = reference_options[
+        reference_options.str.contains(name_substring, case=False, na=False, regex=False)
+    ]
+
+    if not matches.empty:
+        st.session_state[REFERENCE_KEY] = matches.iloc[0]
+
+    st.session_state[SEARCH_MODE_KEY] = mode
+    st.session_state[PENDING_NAV_KEY] = "Successor Finder"
+    st.rerun()
+
+
+def jump_to_compare(name_a_substring: str, name_b_substring: str) -> None:
+    """Safely pre-seed both Compare Players selections and switch to it."""
+    pool = players["display_name"]
+    match_a = pool[pool.str.contains(name_a_substring, case=False, na=False, regex=False)]
+    match_b = pool[pool.str.contains(name_b_substring, case=False, na=False, regex=False)]
+
+    if not match_a.empty:
+        st.session_state[COMPARE_A_KEY] = match_a.iloc[0]
+
+    if not match_b.empty:
+        st.session_state[COMPARE_B_KEY] = match_b.iloc[0]
+
+    st.session_state[PENDING_NAV_KEY] = "Compare Players"
+    st.rerun()
+
+
+st.markdown("#### Try these questions")
+
+hook_questions = [
+    ("Can anyone replace Lionel Messi?", "player", "L. Messi", "Current replacements"),
+    ("Who is the next Kevin De Bruyne?", "player", "K. De Bruyne", "Young successors"),
+    ("What type of midfielder is Jude Bellingham?", "player", "J. Bellingham", "All similar players"),
+    ("Which players share Ronaldinho's DNA?", "player", "Ronaldinho", "Historical lookalikes"),
+    ("How similar is Erling Haaland to Ronaldo?", "compare", "Haaland", "Cristiano Ronaldo"),
+]
+
+hook_cols = st.columns(2)
+
+for i, hook_question in enumerate(hook_questions):
+    label, kind = hook_question[0], hook_question[1]
+
+    with hook_cols[i % 2]:
+        if st.button(label, key=f"hook_question_{i}", width="stretch"):
+            if kind == "player":
+                _, _, target, mode = hook_question
+                jump_to_player(target, mode)
+            else:
+                _, _, name_a, name_b = hook_question
+                jump_to_compare(name_a, name_b)
+
 if page == "Successor Finder":
     st.header("Find a player's closest football DNA matches")
-
-    reference_options = players.sort_values(
-        ["overall", "season_year"],
-        ascending=[False, False],
-    )["display_name"].head(5000)
-
-    REFERENCE_KEY = "successor_reference_select"
-    SEARCH_MODE_KEY = "successor_search_mode_select"
-
-    def jump_to_player(name_substring: str, mode: str) -> None:
-        matches = reference_options[
-            reference_options.str.contains(name_substring, case=False, na=False, regex=False)
-        ]
-
-        if not matches.empty:
-            st.session_state[REFERENCE_KEY] = matches.iloc[0]
-
-        st.session_state[SEARCH_MODE_KEY] = mode
 
     st.markdown("#### Popular searches")
 
@@ -753,10 +817,10 @@ elif page == "Compare Players":
     c1, c2 = st.columns(2)
 
     with c1:
-        a = st.selectbox("Player A", players["display_name"].sort_values(), index=0)
+        a = st.selectbox("Player A", players["display_name"].sort_values(), index=0, key=COMPARE_A_KEY)
 
     with c2:
-        b = st.selectbox("Player B", players["display_name"].sort_values(), index=1)
+        b = st.selectbox("Player B", players["display_name"].sort_values(), index=1, key=COMPARE_B_KEY)
 
     pa = players.loc[players["display_name"].eq(a)].iloc[0]
     pb = players.loc[players["display_name"].eq(b)].iloc[0]
