@@ -231,6 +231,8 @@ def _build_card_html(row: pd.Series, score_label: str) -> str:
 
     shares = row.get("shares")
     differences = row.get("differences")
+    narrative = clean_text(row.get("narrative"))
+    trait_breakdown = row.get("trait_breakdown")
 
     successor_score_value = pd.to_numeric(
         pd.Series([row.get("successor_score")]),
@@ -289,6 +291,36 @@ def _build_card_html(row: pd.Series, score_label: str) -> str:
         else ""
     )
 
+    narrative_html = (
+        f'<p class="ewc-player-narrative">{html.escape(narrative)}</p>'
+        if narrative
+        else ""
+    )
+
+    breakdown_html = ""
+
+    if isinstance(trait_breakdown, list) and trait_breakdown:
+        bars = []
+
+        for trait_label, trait_pct in trait_breakdown:
+            pct = max(0.0, min(100.0, float(trait_pct)))
+            bars.append(
+                '<div class="ewc-trait-row">'
+                f'<span class="ewc-trait-label">{html.escape(str(trait_label))}</span>'
+                '<span class="ewc-trait-bar">'
+                f'<span class="ewc-trait-fill" style="width:{pct:.0f}%"></span>'
+                "</span>"
+                f'<span class="ewc-trait-pct">{pct:.0f}%</span>'
+                "</div>"
+            )
+
+        breakdown_html = (
+            '<div class="ewc-trait-breakdown">'
+            '<div class="ewc-player-section-label">DNA breakdown</div>'
+            + "".join(bars)
+            + "</div>"
+        )
+
     explanation_html = ""
 
     if isinstance(shares, list) and shares:
@@ -337,11 +369,13 @@ def _build_card_html(row: pd.Series, score_label: str) -> str:
         "</div>"
         f"{score_html}"
         "</div>"
+        f'<div class="ewc-archetype-chip">{archetype_label}</div>'
         '<div class="ewc-pill-row">'
         f'<span class="ewc-pill">Overall {overall}</span>'
         f'<span class="ewc-pill">Age {age}</span>'
-        f'<span class="ewc-pill">{archetype_label}</span>'
         "</div>"
+        f"{narrative_html}"
+        f"{breakdown_html}"
         f"{explanation_html}"
         "</div>"
         "</div>"

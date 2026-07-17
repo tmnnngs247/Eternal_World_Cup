@@ -131,6 +131,45 @@ p, li, label, span, div {
   line-height: 1.6;
 }
 
+.ewc-reference-callout {
+  line-height: 1.5;
+}
+
+.ewc-reference-header {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #F8FAFC !important;
+}
+
+.ewc-reference-row {
+  margin-top: .55rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.ewc-reference-pill {
+  display: inline-flex;
+  padding: .35rem .7rem;
+  border-radius: 999px;
+  border: 1px solid var(--ewc-border);
+  background: rgba(255,255,255,.07);
+  color: #F8FAFC !important;
+  font-size: .85rem;
+}
+
+.ewc-reference-traits {
+  margin-top: .6rem;
+  font-size: .92rem;
+  color: var(--ewc-muted) !important;
+}
+
+.ewc-reference-mode {
+  margin-top: .3rem;
+  font-size: .85rem;
+  color: var(--ewc-soft) !important;
+}
+
 .ewc-closest-by-season {
   margin: 0;
   padding-left: 1.2rem;
@@ -188,6 +227,13 @@ p, li, label, span, div {
   background: linear-gradient(135deg, rgba(17,28,48,.98), rgba(23,34,58,.92));
   padding: 1.25rem;
   min-height: 220px;
+  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.ewc-player-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(125, 211, 252, .5);
+  box-shadow: 0 16px 40px rgba(0,0,0,.32);
 }
 
 .ewc-player-top {
@@ -216,13 +262,15 @@ p, li, label, span, div {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 72px;
-  padding: .45rem .7rem;
+  min-width: 84px;
+  padding: .55rem .85rem;
   border-radius: 999px;
-  background: rgba(125,211,252,.14);
+  background: rgba(125,211,252,.16);
+  border: 1px solid rgba(125,211,252,.4);
   color: #E0F2FE !important;
   font-weight: 800;
-  font-size: 1.25rem;
+  font-size: 1.6rem;
+  letter-spacing: -.02em;
 }
 
 .ewc-score-wrap {
@@ -240,6 +288,18 @@ p, li, label, span, div {
   color: var(--ewc-soft) !important;
 }
 
+.ewc-archetype-chip {
+  display: inline-flex;
+  margin-top: .8rem;
+  padding: .4rem .75rem;
+  border-radius: .7rem;
+  border: 1px solid rgba(192, 132, 252, .45);
+  background: rgba(192, 132, 252, .14);
+  color: var(--ewc-purple) !important;
+  font-size: .82rem;
+  font-weight: 700;
+}
+
 .ewc-pill {
   display: inline-flex;
   padding: .45rem .7rem;
@@ -247,8 +307,57 @@ p, li, label, span, div {
   border: 1px solid var(--ewc-border);
   background: rgba(255,255,255,.07);
   color: #F8FAFC !important;
-  margin: .8rem .35rem 0 0;
+  margin: .55rem .35rem 0 0;
   font-size: .9rem;
+}
+
+.ewc-player-narrative {
+  margin: .8rem 0 0 0;
+  padding-top: .75rem;
+  border-top: 1px solid rgba(255,255,255,.12);
+  font-size: .92rem;
+  line-height: 1.55;
+  color: var(--ewc-muted) !important;
+}
+
+.ewc-trait-breakdown {
+  margin-top: .75rem;
+  padding-top: .7rem;
+  border-top: 1px solid rgba(255,255,255,.12);
+}
+
+.ewc-trait-row {
+  display: grid;
+  grid-template-columns: 5.4rem 1fr 2.4rem;
+  align-items: center;
+  gap: .5rem;
+  margin-top: .32rem;
+  font-size: .78rem;
+}
+
+.ewc-trait-label {
+  color: var(--ewc-soft) !important;
+}
+
+.ewc-trait-bar {
+  display: block;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.09);
+  overflow: hidden;
+}
+
+.ewc-trait-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--ewc-accent), var(--ewc-green));
+}
+
+.ewc-trait-pct {
+  text-align: right;
+  color: var(--ewc-muted) !important;
+  font-variant-numeric: tabular-nums;
 }
 
 .ewc-player-shares,
@@ -369,13 +478,13 @@ ul[role="listbox"] li * {
 /* Player image cards */
 .ewc-player-card-layout {
   display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
+  grid-template-columns: 140px minmax(0, 1fr);
   gap: 1.1rem;
   align-items: stretch;
 }
 
 .ewc-player-image-wrap {
-  min-height: 160px;
+  min-height: 190px;
   overflow: hidden;
   border: 1px solid var(--ewc-border);
   border-radius: 1rem;
@@ -394,14 +503,14 @@ ul[role="listbox"] li * {
 .ewc-player-image {
   display: block;
   width: 100%;
-  height: 160px;
+  height: 190px;
   object-fit: contain;
   object-position: bottom center;
 }
 
 .ewc-player-image-placeholder {
   width: 100%;
-  height: 160px;
+  height: 190px;
   display: flex;
   align-items: center;
   justify-content: center;

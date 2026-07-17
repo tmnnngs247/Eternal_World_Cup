@@ -8,7 +8,7 @@ import plotly.express as px
 import streamlit as st
 from sklearn.metrics.pairwise import cosine_similarity
 
-from components import dna_pathway, hero, load_css, metrics_grid, player_cards
+from components import clean_text, dna_pathway, hero, load_css, metrics_grid, player_cards
 
 ROOT = Path(__file__).resolve().parents[1]
 PROCESSED = ROOT / "data" / "processed"
@@ -72,6 +72,55 @@ SHARE_MIN_VALUE = 55
 STRONG_VALUE_THRESHOLD = 80
 DIFFERENCE_MIN_THRESHOLD = 8
 
+# Story-driven display labels for search modes -- the underlying values used
+# throughout the matching logic stay unchanged, only what the user reads changes.
+SEARCH_MODE_LABELS = {
+    "Young successors": "Who's next? (U23 successors)",
+    "Current replacements": "Playing today",
+    "Historical lookalikes": "Modern lookalikes",
+    "All similar players": "Unlimited search",
+}
+
+# Short display labels for the compact per-trait score breakdown.
+TRAIT_BREAKDOWN_LABELS = {
+    "passing": "Passing",
+    "shooting": "Shooting",
+    "dribbling": "Dribbling",
+    "pace": "Pace",
+    "physic": "Physicality",
+    "defending": "Defending",
+}
+
+# Sentence-friendly phrasing for the templated "Why this player?" narrative --
+# distinct from the bullet-point labels above, which read fine as list items
+# but not as flowing prose.
+NARRATIVE_SHARE_PHRASES = {
+    "passing": "creative passing range",
+    "shooting": "attacking output",
+    "dribbling": "ability to carry the ball into dangerous areas",
+    "pace": "electric pace",
+    "physic": "physical profile",
+    "defending": "defensive contribution",
+}
+
+NARRATIVE_MORE_PHRASES = {
+    "passing": "even more creative passing",
+    "shooting": "a sharper shooting threat",
+    "dribbling": "more direct ball-carrying",
+    "pace": "extra pace",
+    "physic": "a more physical presence",
+    "defending": "more defensive work",
+}
+
+NARRATIVE_LESS_PHRASES = {
+    "passing": "a less creative passing profile",
+    "shooting": "less of a shooting threat",
+    "dribbling": "less ball-carrying threat",
+    "pace": "less raw pace",
+    "physic": "a lighter physical profile",
+    "defending": "less defensive involvement",
+}
+
 
 def descriptor_value(row_like: pd.Series, columns: list[str]) -> float:
     values = [
@@ -85,8 +134,9 @@ def descriptor_value(row_like: pd.Series, columns: list[str]) -> float:
 def build_profile_comparison(candidate: pd.Series, query: pd.Series) -> dict:
     share_candidates = []
     difference_candidates = []
+    trait_breakdown = []
 
-    for _, columns, strong_label, similar_label, more_label, less_label in PROFILE_DESCRIPTORS:
+    for key, columns, strong_label, similar_label, more_label, less_label in PROFILE_DESCRIPTORS:
         query_value = descriptor_value(query, columns)
         candidate_value = descriptor_value(candidate, columns)
 
@@ -96,21 +146,30 @@ def build_profile_comparison(candidate: pd.Series, query: pd.Series) -> dict:
         diff = candidate_value - query_value
         abs_diff = abs(diff)
 
+        trait_breakdown.append((
+            TRAIT_BREAKDOWN_LABELS.get(key, key.title()),
+            max(0.0, 100.0 - abs_diff),
+        ))
+
         if abs_diff <= SHARE_DIFF_THRESHOLD and min(query_value, candidate_value) >= SHARE_MIN_VALUE:
             average_value = (query_value + candidate_value) / 2
             label = strong_label if average_value >= STRONG_VALUE_THRESHOLD else similar_label
-            share_candidates.append((abs_diff, label))
+            share_candidates.append((abs_diff, label, key))
         elif abs_diff >= DIFFERENCE_MIN_THRESHOLD:
-            difference_candidates.append((abs_diff, more_label if diff > 0 else less_label))
+            direction = "more" if diff > 0 else "less"
+            difference_candidates.append((abs_diff, more_label if diff > 0 else less_label, key, direction))
 
     share_candidates.sort(key=lambda item: item[0])
     difference_candidates.sort(key=lambda item: -item[0])
 
-    shares = [label for _, label in share_candidates[:4]]
-    differences = [label for _, label in difference_candidates[:3]]
+    shares = [label for _, label, _ in share_candidates[:4]]
+    share_keys = [key for _, _, key in share_candidates[:2]]
+    differences = [label for _, label, _, _ in difference_candidates[:3]]
+    difference_keys = [(key, direction) for _, _, key, direction in difference_candidates[:2]]
 
     query_age = pd.to_numeric(query.get("age"), errors="coerce")
     candidate_age = pd.to_numeric(candidate.get("age"), errors="coerce")
+    age_gap = float("nan")
 
     if pd.notna(query_age) and pd.notna(candidate_age):
         age_gap = float(query_age) - float(candidate_age)
@@ -126,7 +185,62 @@ def build_profile_comparison(candidate: pd.Series, query: pd.Series) -> dict:
     if not differences:
         differences = ["No standout attribute differences"]
 
-    return {"shares": shares, "differences": differences}
+    return {
+        "shares": shares,
+        "differences": differences,
+        "share_keys": share_keys,
+        "difference_keys": difference_keys,
+        "age_gap": age_gap,
+        "trait_breakdown": trait_breakdown,
+    }
+
+
+def build_narrative_sentence(
+    candidate_name: str,
+    query_name: str,
+    comparison: dict,
+) -> str:
+    """Template a scout-style sentence from the same comparison data that
+    drives the Shares/Differences bullets -- no external model call."""
+    share_keys = comparison.get("share_keys", [])
+    difference_keys = comparison.get("difference_keys", [])
+    age_gap = comparison.get("age_gap", float("nan"))
+
+    if share_keys:
+        share_phrases = [
+            NARRATIVE_SHARE_PHRASES.get(key, key.replace("_", " "))
+            for key in share_keys
+        ]
+        share_sentence = (
+            f"{candidate_name} shares {query_name}'s "
+            + " and ".join(share_phrases) + "."
+        )
+    else:
+        share_sentence = (
+            f"{candidate_name} carries a broadly similar football DNA "
+            f"profile to {query_name}."
+        )
+
+    difference_sentence = ""
+
+    if difference_keys:
+        difference_phrases = []
+
+        for key, direction in difference_keys:
+            bank = NARRATIVE_MORE_PHRASES if direction == "more" else NARRATIVE_LESS_PHRASES
+            difference_phrases.append(bank.get(key, key.replace("_", " ")))
+
+        difference_sentence = (
+            "Whilst showing " + " and ".join(difference_phrases)
+            + f", {candidate_name} offers a distinct route to a similar role."
+        )
+
+    age_clause = ""
+
+    if pd.notna(age_gap) and age_gap >= 4:
+        age_clause = f" At {age_gap:.0f} years younger, there's real time to grow into it."
+
+    return f"{share_sentence} {difference_sentence}{age_clause}".strip()
 
 
 def successor_score(similarity: float, query: pd.Series, candidate: pd.Series) -> float:
@@ -153,11 +267,21 @@ def add_similarity_reasons(res: pd.DataFrame, query: pd.Series) -> pd.DataFrame:
     shares_column = []
     differences_column = []
     score_column = []
+    narrative_column = []
+    trait_breakdown_column = []
+
+    query_name = clean_text(query.get("short_name", query.get("player_name", "This player"))) or "This player"
 
     for _, row in res.iterrows():
         comparison = build_profile_comparison(row, query)
         shares_column.append(comparison["shares"])
         differences_column.append(comparison["differences"])
+        trait_breakdown_column.append(comparison["trait_breakdown"])
+
+        candidate_name = clean_text(row.get("short_name", row.get("player_name", "This player"))) or "This player"
+        narrative_column.append(
+            build_narrative_sentence(candidate_name, query_name, comparison)
+        )
 
         similarity_value = pd.to_numeric(
             pd.Series([row.get("similarity")]),
@@ -173,6 +297,8 @@ def add_similarity_reasons(res: pd.DataFrame, query: pd.Series) -> pd.DataFrame:
     res["shares"] = shares_column
     res["differences"] = differences_column
     res["successor_score"] = score_column
+    res["narrative"] = narrative_column
+    res["trait_breakdown"] = trait_breakdown_column
 
     return res
 
@@ -332,6 +458,7 @@ if page == "Successor Finder":
                 "Historical lookalikes",
                 "All similar players",
             ],
+            format_func=lambda mode: SEARCH_MODE_LABELS.get(mode, mode),
             key=SEARCH_MODE_KEY,
         )
 
@@ -378,12 +505,36 @@ if page == "Successor Finder":
     query_archetype = query.get("archetype_name")
     query_archetype = query_archetype if pd.notna(query_archetype) else "Unclassified profile"
 
+    elite_traits = []
+
+    for key, columns, *_ in PROFILE_DESCRIPTORS:
+        trait_value = descriptor_value(query, columns)
+
+        if pd.notna(trait_value) and trait_value >= STRONG_VALUE_THRESHOLD:
+            elite_traits.append((trait_value, TRAIT_BREAKDOWN_LABELS.get(key, key.title())))
+
+    elite_traits.sort(key=lambda item: -item[0])
+    elite_traits_label = ", ".join(label for _, label in elite_traits[:3]) or "No standout elite traits at this threshold"
+
+    season_label = clean_text(query.get("season_label", query.get("fifa_version")))
+    search_mode_summary = {
+        "Young successors": "Searching for U23 successors carrying similar DNA.",
+        "Current replacements": "Searching for players active today who could replace this profile.",
+        "Historical lookalikes": "Searching across all eras for historical lookalikes.",
+        "All similar players": "Searching the full, unrestricted player pool.",
+    }.get(search_mode, "")
+
     st.markdown(
-        "<div class='ewc-callout'>🧬 "
-        f"<strong>{html.escape(str(query['short_name']))}</strong>'s football DNA profile: "
-        f"<strong>{html.escape(str(query_archetype))}</strong> "
-        f"&middot; Overall {html.escape(str(query.get('overall', '')))} "
-        f"&middot; Age {html.escape(str(query.get('age', '')))}"
+        "<div class='ewc-callout ewc-reference-callout'>"
+        f"<div class='ewc-reference-header'>🧬 {html.escape(str(query['short_name']))}"
+        f"{f' &middot; {html.escape(season_label)}' if season_label else ''}</div>"
+        "<div class='ewc-reference-row'>"
+        f"<span class='ewc-reference-pill'>{html.escape(str(query_archetype))}</span>"
+        f"<span class='ewc-reference-pill'>Overall {html.escape(str(query.get('overall', '')))}</span>"
+        f"<span class='ewc-reference-pill'>Age {html.escape(str(query.get('age', '')))}</span>"
+        "</div>"
+        f"<div class='ewc-reference-traits'>Elite traits: <strong>{html.escape(elite_traits_label)}</strong></div>"
+        f"<div class='ewc-reference-mode'>{html.escape(search_mode_summary)}</div>"
         "</div>",
         unsafe_allow_html=True,
     )
@@ -453,21 +604,22 @@ if page == "Successor Finder":
             "overall or position settings."
         )
     else:
-        Xq = query[emb_cols].to_numpy(float).reshape(1, -1)
-        X = pool[emb_cols].to_numpy(float)
+        with st.spinner("Searching football DNA..."):
+            Xq = query[emb_cols].to_numpy(float).reshape(1, -1)
+            X = pool[emb_cols].to_numpy(float)
 
-        res = pool.copy()
-        res["similarity"] = cosine_similarity(Xq, X).ravel()
+            res = pool.copy()
+            res["similarity"] = cosine_similarity(Xq, X).ravel()
 
-        res = (
-            res.sort_values("similarity", ascending=False)
-            .head(n)
-        )
+            res = (
+                res.sort_values("similarity", ascending=False)
+                .head(n)
+            )
 
-        res = add_similarity_reasons(res, query)
+            res = add_similarity_reasons(res, query)
 
         st.caption(
-            f"Showing {search_mode.lower()} using "
+            f"Showing {SEARCH_MODE_LABELS.get(search_mode, search_mode).lower()} using "
             f"{position_match.lower()} filtering."
         )
 
