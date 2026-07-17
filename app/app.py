@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import html
+import random
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -94,32 +95,66 @@ TRAIT_BREAKDOWN_LABELS = {
 # Sentence-friendly phrasing for the templated "Why this player?" narrative --
 # distinct from the bullet-point labels above, which read fine as list items
 # but not as flowing prose.
+# Each trait maps to several synonym phrasings -- build_narrative_sentence
+# picks one deterministically per candidate so repeated top traits (pace and
+# physicality dominate most searches) don't read identically across every
+# card in a results grid, while staying stable across reruns.
 NARRATIVE_SHARE_PHRASES = {
-    "passing": "creative passing range",
-    "shooting": "attacking output",
-    "dribbling": "ability to carry the ball into dangerous areas",
-    "pace": "electric pace",
-    "physic": "physical profile",
-    "defending": "defensive contribution",
+    "passing": ["creative passing range", "vision and range of pass", "eye for a killer ball"],
+    "shooting": ["attacking output", "finishing instinct", "goal threat"],
+    "dribbling": [
+        "ability to carry the ball into dangerous areas",
+        "close control in tight spaces",
+        "knack for beating a man one-on-one",
+    ],
+    "pace": ["electric pace", "raw speed in behind", "gas to burn defenders"],
+    "physic": ["physical profile", "power and presence", "physical duels edge"],
+    "defending": ["defensive contribution", "work rate off the ball", "positional discipline"],
 }
 
 NARRATIVE_MORE_PHRASES = {
-    "passing": "even more creative passing",
-    "shooting": "a sharper shooting threat",
-    "dribbling": "more direct ball-carrying",
-    "pace": "extra pace",
-    "physic": "a more physical presence",
-    "defending": "more defensive work",
+    "passing": ["even more creative passing", "a wider range of pass", "sharper vision"],
+    "shooting": ["a sharper shooting threat", "a more clinical edge in front of goal", "extra firepower"],
+    "dribbling": ["more direct ball-carrying", "sharper close control", "a bigger dribbling threat"],
+    "pace": ["extra pace", "a real speed advantage", "more explosiveness in behind"],
+    "physic": ["a more physical presence", "extra power in duels", "a stronger physical edge"],
+    "defending": ["more defensive work", "a heavier defensive workload", "more discipline without the ball"],
 }
 
 NARRATIVE_LESS_PHRASES = {
-    "passing": "a less creative passing profile",
-    "shooting": "less of a shooting threat",
-    "dribbling": "less ball-carrying threat",
-    "pace": "less raw pace",
-    "physic": "a lighter physical profile",
-    "defending": "less defensive involvement",
+    "passing": ["a less creative passing profile", "a tighter passing range", "less range of pass"],
+    "shooting": ["less of a shooting threat", "a lighter goal threat", "less firepower in front of goal"],
+    "dribbling": ["less ball-carrying threat", "a lighter dribbling load", "less of a one-on-one threat"],
+    "pace": ["less raw pace", "a shade less speed", "less gas in behind"],
+    "physic": ["a lighter physical profile", "less physical presence", "a softer edge in duels"],
+    "defending": ["less defensive involvement", "a lighter defensive workload", "less positional discipline"],
 }
+
+NARRATIVE_CLOSERS = [
+    "{candidate} offers a distinct route to a similar role.",
+    "{candidate} gets there a different way.",
+    "{candidate} still lands in the same neighbourhood, just via a different path.",
+]
+
+NARRATIVE_FALLBACK_SHARES = [
+    "{candidate} carries a broadly similar football DNA profile to {query}.",
+    "{candidate} lands in the same broad territory as {query}'s profile.",
+    "{candidate}'s overall football DNA sits close to {query}'s.",
+]
+
+NARRATIVE_AGE_CLAUSES = [
+    " At {gap:.0f} years younger, there's real time to grow into it.",
+    " {gap:.0f} years {query}'s junior, with plenty of runway left.",
+    " A {gap:.0f}-year head start on development still to come.",
+]
+
+
+def _pick_variant(options: object, seed_parts: tuple) -> str:
+    if isinstance(options, str):
+        return options
+
+    seed = "|".join(str(part) for part in seed_parts)
+    return random.Random(seed).choice(options)
 
 
 def descriptor_value(row_like: pd.Series, columns: list[str]) -> float:
@@ -208,7 +243,10 @@ def build_narrative_sentence(
 
     if share_keys:
         share_phrases = [
-            NARRATIVE_SHARE_PHRASES.get(key, key.replace("_", " "))
+            _pick_variant(
+                NARRATIVE_SHARE_PHRASES.get(key, key.replace("_", " ")),
+                (candidate_name, key, "share"),
+            )
             for key in share_keys
         ]
         share_sentence = (
@@ -216,10 +254,9 @@ def build_narrative_sentence(
             + " and ".join(share_phrases) + "."
         )
     else:
-        share_sentence = (
-            f"{candidate_name} carries a broadly similar football DNA "
-            f"profile to {query_name}."
-        )
+        share_sentence = _pick_variant(
+            NARRATIVE_FALLBACK_SHARES, (candidate_name, query_name, "fallback")
+        ).format(candidate=candidate_name, query=query_name)
 
     difference_sentence = ""
 
@@ -228,17 +265,26 @@ def build_narrative_sentence(
 
         for key, direction in difference_keys:
             bank = NARRATIVE_MORE_PHRASES if direction == "more" else NARRATIVE_LESS_PHRASES
-            difference_phrases.append(bank.get(key, key.replace("_", " ")))
+            difference_phrases.append(
+                _pick_variant(
+                    bank.get(key, key.replace("_", " ")),
+                    (candidate_name, key, direction),
+                )
+            )
 
+        closer = _pick_variant(NARRATIVE_CLOSERS, (candidate_name, "closer")).format(
+            candidate=candidate_name
+        )
         difference_sentence = (
-            "Whilst showing " + " and ".join(difference_phrases)
-            + f", {candidate_name} offers a distinct route to a similar role."
+            "Whilst showing " + " and ".join(difference_phrases) + f", {closer}"
         )
 
     age_clause = ""
 
     if pd.notna(age_gap) and age_gap >= 4:
-        age_clause = f" At {age_gap:.0f} years younger, there's real time to grow into it."
+        age_clause = _pick_variant(
+            NARRATIVE_AGE_CLAUSES, (candidate_name, "age")
+        ).format(gap=age_gap, query=query_name)
 
     return f"{share_sentence} {difference_sentence}{age_clause}".strip()
 
@@ -623,7 +669,7 @@ if page == "Successor Finder":
             f"{position_match.lower()} filtering."
         )
 
-        player_cards(res, max_cards=n)
+        player_cards(res, max_cards=n, key_prefix="successor")
 
         with st.expander("Show table"):
             table_res = res.copy()
@@ -652,6 +698,10 @@ if page == "Successor Finder":
 
 elif page == "Compare Players":
     st.header("Compare two player-seasons")
+    st.caption(
+        "Pick any two player-seasons to see the story behind their DNA "
+        "overlap, not just the raw attribute gap."
+    )
 
     c1, c2 = st.columns(2)
 
@@ -669,7 +719,17 @@ elif page == "Compare Players":
         pb[emb_cols].to_numpy(float).reshape(1, -1),
     )[0, 0]
 
-    st.metric("Football DNA Match", f"{sim * 100:.1f}%")
+    pb_row = add_similarity_reasons(pd.DataFrame([pb]), pa).iloc[0].copy()
+    pb_row["similarity"] = sim
+
+    combined = pd.concat(
+        [pd.DataFrame([pa]), pd.DataFrame([pb_row])],
+        ignore_index=True,
+    )
+
+    player_cards(combined, max_cards=2, score_label="DNA Match", key_prefix="compare")
+
+    st.subheader("Attribute radar")
 
     attrs = ["pace", "shooting", "passing", "dribbling", "defending", "physic"]
 
@@ -903,7 +963,7 @@ elif page == "Evolution":
             )
 
         st.subheader("Career snapshots")
-        player_cards(timeline, max_cards=len(timeline))
+        player_cards(timeline, max_cards=len(timeline), key_prefix="evolution")
 
 elif page == "Pathways":
     st.header("Football DNA succession pathways")
@@ -1154,7 +1214,7 @@ elif page == "DNA Map":
 
             if not selected_rows.empty:
                 st.subheader("Selected")
-                player_cards(selected_rows, max_cards=len(selected_rows))
+                player_cards(selected_rows, max_cards=len(selected_rows), key_prefix="dnamap")
         else:
             st.caption("Click a point above to see who it is.")
 
@@ -1176,7 +1236,7 @@ elif page == "Legend Score":
             .assign(similarity=lambda d: d["similarity"] / 100)
         )
 
-        player_cards(legend_cards, max_cards=12, score_label="Legend Score")
+        player_cards(legend_cards, max_cards=12, score_label="Legend Score", key_prefix="legend")
 
         with st.expander("Show full ranking"):
             cols = [
@@ -1278,7 +1338,7 @@ elif page == "Archetypes":
             .head(5)
         )
 
-        player_cards(best_examples, max_cards=5)
+        player_cards(best_examples, max_cards=5, key_prefix="archetype_best")
 
         st.subheader("Emerging examples")
         st.caption(f"FIFA {int(max_season) - 2000}, age 22 or under, by potential.")
@@ -1297,7 +1357,7 @@ elif page == "Archetypes":
         if emerging_examples.empty:
             st.info("No emerging (age 22 or under) examples found for this archetype in the latest season.")
         else:
-            player_cards(emerging_examples, max_cards=5)
+            player_cards(emerging_examples, max_cards=5, key_prefix="archetype_emerging")
 
         with st.expander("Show full archetype table"):
             st.dataframe(archetypes, width="stretch")

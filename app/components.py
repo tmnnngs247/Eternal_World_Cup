@@ -1,14 +1,17 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from io import BytesIO
 from pathlib import Path
 from textwrap import dedent
 import base64
+import hashlib
 import html
 import re
 
 import pandas as pd
 import streamlit as st
+from PIL import Image, ImageDraw, ImageFont
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -69,6 +72,44 @@ def player_initials(name: str) -> str:
 
     initials = "".join(part[0].upper() for part in parts[:2])
     return initials or "⚽"
+
+
+# No club crest/logo imagery exists in the underlying dataset (checked both
+# the raw SoFIFA CSVs and the processed player tables) -- these synthesize a
+# lightweight monogram badge instead of a real crest.
+_CLUB_BADGE_STOPWORDS = {
+    "fc", "cf", "sc", "ac", "as", "rc", "sv", "vfl", "vfb", "fk", "ss",
+    "ssc", "us", "cd", "ud", "afc", "real", "club", "calcio", "de", "fk.",
+}
+
+_CLUB_BADGE_COLORS = [
+    "#7DD3FC", "#C084FC", "#86EFAC", "#FB7185", "#FBBF24",
+    "#F472B6", "#60A5FA", "#34D399", "#A78BFA", "#FCA5A5",
+    "#38BDF8", "#FDE047",
+]
+
+
+def club_initials(club_name: str) -> str:
+    """Compact 1-2 letter monogram for a club name, skipping common prefixes."""
+    words = [word for word in re.split(r"[\s.]+", html.unescape(club_name)) if word]
+    significant = [
+        word for word in words
+        if word.lower().strip(".") not in _CLUB_BADGE_STOPWORDS
+    ] or words
+
+    if not significant:
+        return "?"
+
+    if len(significant) == 1:
+        return significant[0][:2].upper()
+
+    return "".join(word[0].upper() for word in significant[:2])
+
+
+def club_badge_color(club_name: str) -> str:
+    """Deterministic accent color for a club, stable across reruns/processes."""
+    digest = hashlib.md5(club_name.encode("utf-8")).hexdigest()
+    return _CLUB_BADGE_COLORS[int(digest, 16) % len(_CLUB_BADGE_COLORS)]
 
 
 def get_local_image_path(value: object) -> str:
@@ -181,14 +222,25 @@ def _build_card_html(row: pd.Series, score_label: str) -> str:
         )
     )
 
-    club = html.escape(
-        clean_text(
-            row.get(
-                "club_name",
-                row.get("club"),
-            )
+    raw_club = clean_text(
+        row.get(
+            "club_name",
+            row.get("club"),
         )
     )
+
+    club = html.escape(raw_club)
+
+    club_badge_html = ""
+
+    if raw_club:
+        badge_color = club_badge_color(raw_club)
+        badge_initials = html.escape(club_initials(raw_club))
+        club_badge_html = (
+            f'<span class="ewc-club-badge" '
+            f'style="border-color:{badge_color}77;color:{badge_color};'
+            f'background:{badge_color}1F;">{badge_initials}</span>'
+        )
 
     nation = html.escape(
         clean_text(
@@ -364,7 +416,7 @@ def _build_card_html(row: pd.Series, score_label: str) -> str:
         '<div class="ewc-player-top">'
         "<div>"
         f'<div class="ewc-player-name">{flag} {name}</div>'
-        f'<div class="ewc-player-meta">{season} · {club}</div>'
+        f'<div class="ewc-player-meta">{season} · {club_badge_html}{club}</div>'
         f'<div class="ewc-player-meta">{nation} · {position}</div>'
         "</div>"
         f"{score_html}"
@@ -383,26 +435,265 @@ def _build_card_html(row: pd.Series, score_label: str) -> str:
     )
 
 
-def player_cards(df: pd.DataFrame, max_cards: int = 8, score_label: str = "DNA Match") -> None:
+_EXPORT_BG = (11, 16, 32)
+_EXPORT_PANEL = (26, 38, 62)
+_EXPORT_TRACK = (40, 50, 72)
+_EXPORT_TEXT = (248, 250, 252)
+_EXPORT_MUTED = (175, 193, 212)
+_EXPORT_ACCENT = (125, 211, 252)
+_EXPORT_PURPLE = (192, 132, 252)
+_EXPORT_BORDER = (90, 104, 132)
+_EXPORT_WATERMARK = (120, 132, 156)
+
+
+@lru_cache(maxsize=8)
+def _export_font(size: int) -> "ImageFont.FreeTypeFont":
+    return ImageFont.load_default(size=size)
+
+
+def _wrap_export_text(
+    draw: "ImageDraw.ImageDraw",
+    text: str,
+    font: "ImageFont.FreeTypeFont",
+    max_width: int,
+    max_lines: int,
+) -> list[str]:
+    words = text.split()
+    lines: list[str] = []
+    current = ""
+
+    for word in words:
+        candidate = f"{current} {word}".strip()
+
+        if draw.textlength(candidate, font=font) <= max_width:
+            current = candidate
+        else:
+            if current:
+                lines.append(current)
+            current = word
+
+    if current:
+        lines.append(current)
+
+    if len(lines) > max_lines:
+        lines = lines[:max_lines]
+        last = lines[-1]
+
+        while draw.textlength(f"{last}…", font=font) > max_width and len(last) > 1:
+            last = last[:-1]
+
+        lines[-1] = f"{last.rstrip()}…"
+
+    return lines
+
+
+def render_card_image(row: pd.Series, score_label: str = "DNA Match") -> bytes:
+    """Server-side render of a shareable PNG mirroring the on-screen card.
+
+    Streamlit can't reliably screenshot arbitrary HTML client-side, so this
+    redraws the same fields with Pillow instead of trying to rasterize the DOM.
+    """
+    width, height = 1000, 640
+    image = Image.new("RGB", (width, height), _EXPORT_BG)
+    draw = ImageDraw.Draw(image)
+
+    draw.rounded_rectangle(
+        [20, 20, width - 20, height - 20],
+        radius=28,
+        outline=_EXPORT_BORDER,
+        width=2,
+    )
+
+    raw_name = clean_text(row.get("short_name", row.get("player_name", "Unknown"))) or "Unknown"
+    season = clean_text(row.get("season_label", row.get("fifa_version")))
+    club = clean_text(row.get("club_name", row.get("club")))
+    nation = clean_text(row.get("nationality_name", row.get("country")))
+    position = clean_text(row.get("player_positions", row.get("position")))
+    overall = clean_text(row.get("overall", row.get("ovr")))
+    age = clean_text(row.get("age"))
+    archetype_name = clean_text(row.get("archetype_name"))
+    archetype_id = clean_text(row.get("archetype_id"))
+    archetype_label = archetype_name or (f"Cluster {archetype_id}" if archetype_id else "Unclassified profile")
+    narrative = clean_text(row.get("narrative"))
+    trait_breakdown = row.get("trait_breakdown")
+    successor_score_value = pd.to_numeric(
+        pd.Series([row.get("successor_score")]), errors="coerce"
+    ).iloc[0]
+    similarity = pd.to_numeric(pd.Series([row.get("similarity")]), errors="coerce").iloc[0]
+
+    portrait_box = (56, 56, 316, 560)
+    draw.rounded_rectangle(portrait_box, radius=20, fill=_EXPORT_PANEL)
+
+    local_image_path = get_local_image_path(sofifa_id_from_image_url(row.get("image_url")))
+    pasted = False
+
+    if local_image_path:
+        try:
+            portrait_img = Image.open(local_image_path).convert("RGBA")
+            box_w = portrait_box[2] - portrait_box[0] - 24
+            box_h = portrait_box[3] - portrait_box[1] - 24
+            portrait_img.thumbnail((box_w, box_h))
+            px = portrait_box[0] + (portrait_box[2] - portrait_box[0] - portrait_img.width) // 2
+            py = portrait_box[3] - 12 - portrait_img.height
+            image.paste(portrait_img, (px, py), portrait_img)
+            pasted = True
+        except OSError:
+            pasted = False
+
+    if not pasted:
+        initials = player_initials(raw_name)
+        side = portrait_box[2] - portrait_box[0] - 80
+        cx0 = portrait_box[0] + 40
+        cy0 = portrait_box[1] + 150
+        draw.ellipse([cx0, cy0, cx0 + side, cy0 + side], fill=_EXPORT_TRACK)
+        font_initials = _export_font(48)
+        tw = draw.textlength(initials, font=font_initials)
+        draw.text(
+            (cx0 + side / 2 - tw / 2, cy0 + side / 2 - 28),
+            initials,
+            font=font_initials,
+            fill=_EXPORT_MUTED,
+        )
+
+    x0 = 348
+
+    font_name = _export_font(36)
+    draw.text((x0, 52), raw_name, font=font_name, fill=_EXPORT_TEXT)
+
+    font_meta = _export_font(19)
+    meta_line = " · ".join(part for part in [season, club] if part)
+    draw.text((x0, 100), meta_line, font=font_meta, fill=_EXPORT_MUTED)
+    meta_line2 = " · ".join(part for part in [nation, position] if part)
+    draw.text((x0, 126), meta_line2, font=font_meta, fill=_EXPORT_MUTED)
+
+    if pd.notna(similarity):
+        score_text = f"{float(similarity) * 100:.1f}%"
+        font_score = _export_font(38)
+        badge_cx, badge_cy, badge_r = width - 130, 116, 62
+        draw.ellipse(
+            [badge_cx - badge_r, badge_cy - badge_r, badge_cx + badge_r, badge_cy + badge_r],
+            outline=_EXPORT_ACCENT,
+            width=3,
+            fill=(17, 33, 51),
+        )
+        tw = draw.textlength(score_text, font=font_score)
+        draw.text((badge_cx - tw / 2, badge_cy - 21), score_text, font=font_score, fill=_EXPORT_ACCENT)
+        font_label = _export_font(13)
+        label_text = score_label.upper()
+        lw = draw.textlength(label_text, font=font_label)
+        draw.text(
+            (badge_cx - lw / 2, badge_cy - badge_r - 20),
+            label_text,
+            font=font_label,
+            fill=_EXPORT_MUTED,
+        )
+
+    font_chip = _export_font(18)
+    chip_w = draw.textlength(archetype_label, font=font_chip) + 28
+    chip_box = (x0, 168, x0 + chip_w, 202)
+    draw.rounded_rectangle(chip_box, radius=17, outline=_EXPORT_PURPLE, width=2, fill=(43, 26, 61))
+    draw.text((x0 + 14, 176), archetype_label, font=font_chip, fill=_EXPORT_PURPLE)
+
+    pill_x, pill_y = x0, 216
+    font_pill = _export_font(16)
+
+    for value, pill_text in [(overall, f"Overall {overall}"), (age, f"Age {age}")]:
+        if not value:
+            continue
+
+        pw = draw.textlength(pill_text, font=font_pill) + 24
+        draw.rounded_rectangle(
+            (pill_x, pill_y, pill_x + pw, pill_y + 30), radius=15, outline=_EXPORT_BORDER, width=1
+        )
+        draw.text((pill_x + 12, pill_y + 6), pill_text, font=font_pill, fill=_EXPORT_TEXT)
+        pill_x += pw + 10
+
+    y = 266
+
+    if narrative:
+        font_narrative = _export_font(17)
+        max_text_width = width - x0 - 40
+
+        for line in _wrap_export_text(draw, narrative, font_narrative, max_text_width, max_lines=3):
+            draw.text((x0, y), line, font=font_narrative, fill=_EXPORT_MUTED)
+            y += 24
+
+        y += 12
+
+    if isinstance(trait_breakdown, list) and trait_breakdown:
+        font_trait = _export_font(14)
+        bar_w = 200
+
+        for trait_label, trait_pct in trait_breakdown[:6]:
+            pct = max(0.0, min(100.0, float(trait_pct)))
+            draw.text((x0, y + 2), str(trait_label), font=font_trait, fill=_EXPORT_MUTED)
+            track_x0 = x0 + 110
+            track_x1 = track_x0 + bar_w
+            draw.rounded_rectangle((track_x0, y + 4, track_x1, y + 12), radius=4, fill=_EXPORT_TRACK)
+            fill_x1 = track_x0 + bar_w * (pct / 100.0)
+
+            if fill_x1 > track_x0:
+                draw.rounded_rectangle((track_x0, y + 4, fill_x1, y + 12), radius=4, fill=_EXPORT_ACCENT)
+
+            draw.text((track_x1 + 12, y + 1), f"{pct:.0f}%", font=font_trait, fill=_EXPORT_TEXT)
+            y += 24
+
+    if pd.notna(successor_score_value):
+        font_footer = _export_font(18)
+        draw.text(
+            (x0, 566),
+            f"Modern Successor Score: {successor_score_value:.1f}/10",
+            font=font_footer,
+            fill=_EXPORT_MUTED,
+        )
+
+    font_watermark = _export_font(15)
+    watermark = "The Eternal World Cup"
+    ww = draw.textlength(watermark, font=font_watermark)
+    draw.text((width - 40 - ww, height - 40), watermark, font=font_watermark, fill=_EXPORT_WATERMARK)
+
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def _download_card_button(row: pd.Series, score_label: str, key: str) -> None:
+    file_stub = re.sub(r"[^a-z0-9]+", "_", clean_text(row.get("short_name", "player")).lower()).strip("_")
+
+    st.download_button(
+        "⬇ Download DNA card",
+        data=render_card_image(row, score_label),
+        file_name=f"{file_stub or 'player'}_dna_card.png",
+        mime="image/png",
+        key=key,
+        width="stretch",
+    )
+
+
+def player_cards(
+    df: pd.DataFrame,
+    max_cards: int = 8,
+    score_label: str = "DNA Match",
+    key_prefix: str = "cards",
+) -> None:
     if df.empty:
         st.info("No matching players found.")
         return
 
-    cards = [
-        _build_card_html(row, score_label)
-        for _, row in df.head(max_cards).iterrows()
-    ]
+    rows = list(df.head(max_cards).iterrows())
 
-    grid_html = (
-        '<div class="ewc-card-grid">'
-        + "".join(cards)
-        + "</div>"
-    )
+    for start in range(0, len(rows), 2):
+        chunk = rows[start:start + 2]
+        columns = st.columns(2)
 
-    st.markdown(
-        grid_html,
-        unsafe_allow_html=True,
-    )
+        for position, (column, (row_index, row)) in enumerate(zip(columns, chunk)):
+            with column:
+                st.markdown(_build_card_html(row, score_label), unsafe_allow_html=True)
+                _download_card_button(
+                    row,
+                    score_label,
+                    key=f"card_dl_{key_prefix}_{start + position}",
+                )
 
 
 def dna_pathway(rows: list[pd.Series], step_labels: list[str] | None = None) -> None:
