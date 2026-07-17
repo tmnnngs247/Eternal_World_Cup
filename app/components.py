@@ -127,15 +127,20 @@ def image_data_uri(path_string: str) -> str:
     return f"data:{mime_type};base64,{encoded}"
 
 
-HERO_IMAGE_PATH = ROOT / "assets" / "football_genome_header.jpg"
+HERO_IMAGE_PATH = ROOT / "assets" / "football_genome_header_v2.jpg"
 
 
 def hero() -> None:
     hero_image_uri = image_data_uri(str(HERO_IMAGE_PATH))
 
+    # The banner art already carries the title, tagline and hook line as
+    # part of the design, so there's no separate text overlay here anymore --
+    # duplicating it in HTML would just repeat what the image already says.
     hero_image_html = (
         f'<div class="ewc-hero-image-wrap"><img class="ewc-hero-image" '
-        f'src="{html.escape(hero_image_uri, quote=True)}" alt="" loading="lazy"></div>'
+        f'src="{html.escape(hero_image_uri, quote=True)}" alt="The Football Genome -- '
+        f'every footballer has a DNA profile. Compare generations, discover future '
+        f'successors, reveal football\'s hidden connections." loading="lazy"></div>'
         if hero_image_uri
         else ""
     )
@@ -144,13 +149,6 @@ def hero() -> None:
         f"""
         <section class="ewc-hero">
           {hero_image_html}
-          <div class="ewc-hero-content">
-            <h1>Every footballer has a DNA profile.</h1>
-            <p>
-              Compare generations &middot; Discover successors &middot;
-              Reveal football's hidden connections.
-            </p>
-          </div>
         </section>
         """
     )
