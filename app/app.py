@@ -1155,15 +1155,17 @@ elif page == "DNA Map":
     if nationality_choice:
         map_df = map_df[map_df["nationality_name"].isin(nationality_choice)]
 
-    max_points = st.slider(
-        "Max players shown",
-        500,
-        min(10000, max(500, len(map_df))),
-        min(2500, max(500, len(map_df))),
-        500,
-    )
+    map_df = map_df.sort_values("overall", ascending=False)
 
-    map_df = map_df.sort_values("overall", ascending=False).head(max_points)
+    if len(map_df) > 500:
+        max_points = st.slider(
+            "Max players shown",
+            500,
+            min(10000, len(map_df)),
+            min(2500, len(map_df)),
+            500,
+        )
+        map_df = map_df.head(max_points)
 
     st.caption(f"Showing {len(map_df):,} player-seasons.")
 
