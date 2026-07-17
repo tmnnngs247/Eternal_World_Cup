@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import html
+import math
 import random
 import numpy as np
 import pandas as pd
@@ -14,7 +15,7 @@ from components import clean_text, dna_pathway, hero, load_css, metrics_grid, pl
 ROOT = Path(__file__).resolve().parents[1]
 PROCESSED = ROOT / "data" / "processed"
 
-st.set_page_config(page_title="The Eternal World Cup", page_icon="⚽", layout="wide")
+st.set_page_config(page_title="The Football Genome", page_icon="🧬", layout="wide")
 load_css()
 
 @st.cache_data
@@ -414,7 +415,7 @@ if not emb_cols:
     st.stop()
 
 with st.sidebar:
-    st.markdown("## ⚽ Eternal World Cup")
+    st.markdown("## 🧬 The Football Genome")
     st.caption("Football DNA, decoded.")
     st.markdown("---")
     page = st.radio(
@@ -424,7 +425,7 @@ with st.sidebar:
     )
     st.markdown("---")
     st.success("Autoencoder embeddings live")
-    st.caption("Trained on FIFA attributes + FBRef performance data across 8 seasons.")
+    st.caption("Trained on FIFA attributes + FBRef performance data across 10 FIFA editions.")
 
 hero()
 metrics_grid([
@@ -434,7 +435,8 @@ metrics_grid([
     ("Latest player pool", f"{players['name_key'].nunique():,}", "Unique players"),
     ("Countries", f"{players['nationality_name'].nunique():,}", "Nations on the map"),
     ("Clubs", f"{players['club_name'].nunique():,}", "Clubs represented"),
-    ("World Cups", f"{players.loc[players['wc_apps'].notna(), 'season_year'].nunique()}", "Tournaments tracked"),
+    ("DNA comparisons", f"{math.comb(len(players), 2) / 1_000_000:.0f}M+", "Possible player-pairs"),
+    ("FIFA editions", f"{players['season_label'].nunique()}", "Seasons of data"),
 ])
 
 players = players.copy()

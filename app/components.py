@@ -134,7 +134,7 @@ def hero() -> None:
     hero_image_uri = image_data_uri(str(HERO_IMAGE_PATH))
 
     hero_style = (
-        "background-image: linear-gradient(rgba(9,13,26,.87), rgba(9,13,26,.87)), "
+        "background-image: linear-gradient(rgba(7,10,21,.95), rgba(7,10,21,.95)), "
         f"url('{hero_image_uri}'); background-size: cover; background-position: center 12%;"
         if hero_image_uri
         else ""
@@ -143,18 +143,17 @@ def hero() -> None:
     render_html(
         f"""
         <section class="ewc-hero" style="{hero_style}">
-          <h1>The Eternal World Cup</h1>
+          <h1>The Football Genome</h1>
           <p>
-            Football refuses to say goodbye to its greats. This app uses
-            football-DNA player embeddings to explore which modern players
-            resemble past stars, which profiles cluster together, and who
-            might become the players we are still talking about decades from now.
+            Every footballer has a DNA profile. Discover who shares it --
+            compare players across generations, uncover future successors,
+            and see how football's greatest are connected.
           </p>
           <div class="ewc-badges">
-            <span class="ewc-badge">Neural-style embeddings</span>
-            <span class="ewc-badge">Player similarity</span>
-            <span class="ewc-badge">World Cup storytelling</span>
-            <span class="ewc-badge">Talent ID lens</span>
+            <span class="ewc-badge">Football DNA</span>
+            <span class="ewc-badge">Future Successors</span>
+            <span class="ewc-badge">Player Evolution</span>
+            <span class="ewc-badge">Talent Identification</span>
           </div>
         </section>
         """
