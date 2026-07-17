@@ -706,6 +706,50 @@ elif page == "Evolution":
                 unsafe_allow_html=True,
             )
 
+        st.subheader("Closest players by season")
+        st.caption(
+            "Who this player most resembled in football DNA that same FIFA edition -- "
+            "not who they resemble today."
+        )
+
+        closest_by_season = []
+
+        for _, row in timeline.iterrows():
+            season_pool = players[
+                players["season_year"].eq(row["season_year"])
+                & players["name_key"].ne(row["name_key"])
+            ].dropna(subset=emb_cols)
+
+            if season_pool.empty:
+                continue
+
+            Xq = row[emb_cols].to_numpy(float).reshape(1, -1)
+            X = season_pool[emb_cols].to_numpy(float)
+            season_similarities = cosine_similarity(Xq, X).ravel()
+            best_position = season_similarities.argmax()
+            best_match = season_pool.iloc[best_position]
+
+            closest_by_season.append({
+                "season_label": row["season_label"],
+                "name": best_match["short_name"],
+                "similarity": season_similarities[best_position],
+            })
+
+        if closest_by_season:
+            items_html = "".join(
+                "<li>"
+                f"<strong>{html.escape(str(item['season_label']))}</strong> — "
+                f"{html.escape(str(item['name']))} "
+                f"<span class='ewc-closest-sim'>({item['similarity'] * 100:.0f}% DNA match)</span>"
+                "</li>"
+                for item in closest_by_season
+            )
+
+            st.markdown(
+                f"<div class='ewc-callout'><ul class='ewc-closest-by-season'>{items_html}</ul></div>",
+                unsafe_allow_html=True,
+            )
+
         st.subheader("Career snapshots")
         player_cards(timeline, max_cards=len(timeline))
 
