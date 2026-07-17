@@ -4,9 +4,11 @@ from pathlib import Path
 import html
 import math
 import random
+import networkx as nx
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import streamlit as st
 from sklearn.metrics.pairwise import cosine_similarity
 
@@ -412,6 +414,162 @@ def broad_position_group(position_string: object) -> str:
 def primary_position(position_string: object) -> str:
     positions = str(position_string or "")
     return positions.split(",")[0].strip().upper()
+
+
+def closest_players(
+    center_row: pd.Series,
+    pool: pd.DataFrame,
+    emb_cols: list[str],
+    top_n: int,
+    exclude_keys: set,
+) -> pd.DataFrame:
+    candidates = pool[~pool["name_key"].isin(exclude_keys)]
+
+    if candidates.empty:
+        return candidates
+
+    Xq = center_row[emb_cols].to_numpy(float).reshape(1, -1)
+    X = candidates[emb_cols].to_numpy(float)
+    similarities = cosine_similarity(Xq, X).ravel()
+
+    return (
+        candidates.assign(similarity=similarities)
+        .sort_values("similarity", ascending=False)
+        .head(top_n)
+    )
+
+
+NETWORK_RING_STYLES = {
+    0: {"size": 36, "color": "#7DD3FC", "font_size": 15},
+    1: {"size": 22, "color": "#C084FC", "font_size": 12},
+    2: {"size": 14, "color": "#86EFAC", "font_size": 10},
+}
+
+
+def build_dna_network(
+    center_row: pd.Series,
+    pool: pd.DataFrame,
+    emb_cols: list[str],
+    ring1_size: int = 6,
+    ring2_size: int = 2,
+) -> nx.Graph:
+    """A 2-ring "who's nearby" graph: the center player, their closest DNA
+    matches, and each of those matches' own closest matches in turn -- a
+    small explorable neighbourhood rather than the full population."""
+    graph = nx.Graph()
+    center_key = center_row["name_key"]
+    graph.add_node(center_key, ring=0, row=center_row)
+
+    used_keys = {center_key}
+    ring1 = closest_players(center_row, pool, emb_cols, ring1_size, used_keys)
+
+    for _, row in ring1.iterrows():
+        graph.add_node(row["name_key"], ring=1, row=row)
+        graph.add_edge(center_key, row["name_key"], weight=float(row["similarity"]))
+        used_keys.add(row["name_key"])
+
+    for _, r1_row in ring1.iterrows():
+        ring2 = closest_players(r1_row, pool, emb_cols, ring2_size, used_keys)
+
+        for _, r2_row in ring2.iterrows():
+            graph.add_node(r2_row["name_key"], ring=2, row=r2_row)
+            graph.add_edge(r1_row["name_key"], r2_row["name_key"], weight=float(r2_row["similarity"]))
+            used_keys.add(r2_row["name_key"])
+
+    return graph
+
+
+def build_network_figure(graph: nx.Graph, center_key: str) -> go.Figure:
+    pos = nx.spring_layout(graph, seed=42, k=0.9)
+    cx, cy = pos[center_key]
+    pos = {key: (x - cx, y - cy) for key, (x, y) in pos.items()}
+
+    edge_styles = [
+        ((0, 1), {"width": 2.5, "color": "rgba(125,211,252,0.5)"}),
+        ((1, 2), {"width": 1.2, "color": "rgba(175,193,212,0.35)"}),
+    ]
+
+    traces = []
+
+    for (ring_lo, ring_hi), style in edge_styles:
+        edge_x, edge_y = [], []
+
+        for u, v in graph.edges():
+            rings = {graph.nodes[u]["ring"], graph.nodes[v]["ring"]}
+
+            if rings == {ring_lo, ring_hi}:
+                x0, y0 = pos[u]
+                x1, y1 = pos[v]
+                edge_x += [x0, x1, None]
+                edge_y += [y0, y1, None]
+
+        if edge_x:
+            traces.append(go.Scatter(
+                x=edge_x, y=edge_y,
+                mode="lines",
+                line=style,
+                hoverinfo="none",
+                showlegend=False,
+            ))
+
+    for ring, style in NETWORK_RING_STYLES.items():
+        keys = [key for key, data in graph.nodes(data=True) if data["ring"] == ring]
+
+        if not keys:
+            continue
+
+        rows = [graph.nodes[key]["row"] for key in keys]
+        xs = [pos[key][0] for key in keys]
+        ys = [pos[key][1] for key in keys]
+        names = [clean_text(row.get("short_name")) for row in rows]
+
+        customdata = [
+            [
+                clean_text(row.get("short_name")) or "Unknown",
+                clean_text(row.get("club_name")),
+                clean_text(row.get("nationality_name")),
+                clean_text(row.get("player_positions")),
+                clean_text(row.get("overall")),
+                clean_text(row.get("age")),
+                clean_text(row.get("archetype_name")) or "Unclassified profile",
+                clean_text(row.get("display_name")),
+            ]
+            for row in rows
+        ]
+
+        traces.append(go.Scatter(
+            x=xs, y=ys,
+            mode="markers+text",
+            text=names,
+            textposition="bottom center",
+            textfont=dict(color="#F8FAFC", size=style["font_size"]),
+            marker=dict(
+                size=style["size"],
+                color=style["color"],
+                line=dict(width=2, color="#0B1020"),
+            ),
+            customdata=customdata,
+            hovertemplate=(
+                "<b>%{customdata[0]}</b><br>"
+                "%{customdata[1]} · %{customdata[2]}<br>"
+                "%{customdata[3]} · Overall %{customdata[4]} · Age %{customdata[5]}<br>"
+                "%{customdata[6]}<extra></extra>"
+            ),
+            showlegend=False,
+        ))
+
+    fig = go.Figure(data=traces)
+    fig.update_layout(
+        template="plotly_dark",
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        height=650,
+        margin=dict(l=10, r=10, t=10, b=10),
+        xaxis=dict(visible=False),
+        yaxis=dict(visible=False),
+    )
+
+    return fig
 
 
 players = load_players()
@@ -1192,168 +1350,236 @@ elif page == "Pathways":
 elif page == "DNA Map":
     st.header("Explore football's DNA landscape")
 
-    st.markdown(
-        "<p class='ewc-hint'>Filter by position, age, overall, archetype, nationality "
-        "or season -- or jump straight to a preset like wonderkids or physical monsters. "
-        "Click a point on the map to see who it is.</p>",
-        unsafe_allow_html=True,
-    )
+    landscape_tab, network_tab = st.tabs(["🗺️ Landscape", "🕸️ DNA Network"])
 
-    season_options = ["Latest season only"] + sorted(
-        players["season_label"].dropna().unique().tolist(),
-        reverse=True,
-    )
-
-    quick_filter = st.selectbox(
-        "Quick filter",
-        ["None", "Wonderkids", "Elite creators", "Physical monsters", "Playmakers"],
-    )
-
-    filter_row_1 = st.columns(3)
-
-    with filter_row_1[0]:
-        season_choice = st.selectbox("Season", season_options)
-
-    with filter_row_1[1]:
-        position_choice = st.selectbox(
-            "Position",
-            ["All", "Goalkeeper", "Defender", "Midfielder", "Forward"],
+    with landscape_tab:
+        st.markdown(
+            "<p class='ewc-hint'>Filter by position, age, overall, archetype, nationality "
+            "or season -- or jump straight to a preset like wonderkids or physical monsters. "
+            "Click a point on the map to see who it is.</p>",
+            unsafe_allow_html=True,
         )
 
-    with filter_row_1[2]:
-        archetype_choice = st.selectbox(
-            "Archetype",
-            ["All"] + sorted(players["archetype_name"].dropna().unique().tolist()),
+        season_options = ["Latest season only"] + sorted(
+            players["season_label"].dropna().unique().tolist(),
+            reverse=True,
         )
 
-    filter_row_2 = st.columns(2)
-
-    with filter_row_2[0]:
-        age_range = st.slider("Age range", 15, 45, (15, 45))
-
-    with filter_row_2[1]:
-        overall_range = st.slider("Overall range", 40, 99, (40, 99))
-
-    with st.expander("More filters"):
-        nationality_choice = st.multiselect(
-            "Nationality",
-            sorted(players["nationality_name"].dropna().unique().tolist()),
+        quick_filter = st.selectbox(
+            "Quick filter",
+            ["None", "Wonderkids", "Elite creators", "Physical monsters", "Playmakers"],
         )
 
-    if season_choice == "Latest season only":
-        map_df = latest.dropna(subset=["map_x", "map_y"]).copy()
-    else:
-        map_df = players[
-            players["season_label"].eq(season_choice)
-        ].dropna(subset=["map_x", "map_y"]).copy()
+        filter_row_1 = st.columns(3)
 
-    if quick_filter == "Wonderkids":
-        map_df = map_df[
-            pd.to_numeric(map_df["age"], errors="coerce").le(21)
-            & pd.to_numeric(map_df["potential"], errors="coerce").ge(82)
-        ]
-    elif quick_filter == "Elite creators":
-        map_df = map_df[pd.to_numeric(map_df["passing"], errors="coerce").ge(82)]
-    elif quick_filter == "Physical monsters":
-        map_df = map_df[pd.to_numeric(map_df["physic"], errors="coerce").ge(85)]
-    elif quick_filter == "Playmakers":
-        map_df = map_df[
-            pd.to_numeric(map_df["passing"], errors="coerce").ge(78)
-            & pd.to_numeric(map_df["dribbling"], errors="coerce").ge(78)
-        ]
+        with filter_row_1[0]:
+            season_choice = st.selectbox("Season", season_options)
 
-    if position_choice != "All":
-        map_df = map_df[
-            map_df["player_positions"].map(broad_position_group).eq(position_choice)
-        ]
-
-    if archetype_choice != "All":
-        map_df = map_df[map_df["archetype_name"].eq(archetype_choice)]
-
-    map_df = map_df[
-        pd.to_numeric(map_df["age"], errors="coerce").between(age_range[0], age_range[1])
-        & pd.to_numeric(map_df["overall"], errors="coerce").between(overall_range[0], overall_range[1])
-    ]
-
-    if nationality_choice:
-        map_df = map_df[map_df["nationality_name"].isin(nationality_choice)]
-
-    map_df = map_df.sort_values("overall", ascending=False)
-
-    if len(map_df) > 500:
-        max_points = st.slider(
-            "Max players shown",
-            500,
-            min(10000, len(map_df)),
-            min(2500, len(map_df)),
-            500,
-        )
-        map_df = map_df.head(max_points)
-
-    st.caption(f"Showing {len(map_df):,} player-seasons.")
-
-    if map_df.empty:
-        st.warning("No players match these filters. Try widening them.")
-    else:
-        hover_fields = [
-            "short_name", "club_name", "nationality_name",
-            "player_positions", "overall", "age", "archetype_name",
-        ]
-
-        fig = px.scatter(
-            map_df,
-            x="map_x",
-            y="map_y",
-            color="archetype_name" if "archetype_name" in map_df else None,
-            custom_data=["player_season_id"] + hover_fields,
-            title="Football DNA landscape",
-            labels={"map_x": "DNA axis 1", "map_y": "DNA axis 2"},
-        )
-
-        fig.update_traces(
-            hovertemplate=(
-                "<b>%{customdata[1]}</b><br>"
-                "%{customdata[2]} · %{customdata[3]}<br>"
-                "%{customdata[4]} · Overall %{customdata[5]} · Age %{customdata[6]}<br>"
-                "%{customdata[7]}"
-                "<extra></extra>"
+        with filter_row_1[1]:
+            position_choice = st.selectbox(
+                "Position",
+                ["All", "Goalkeeper", "Defender", "Midfielder", "Forward"],
             )
+
+        with filter_row_1[2]:
+            archetype_choice = st.selectbox(
+                "Archetype",
+                ["All"] + sorted(players["archetype_name"].dropna().unique().tolist()),
+            )
+
+        filter_row_2 = st.columns(2)
+
+        with filter_row_2[0]:
+            age_range = st.slider("Age range", 15, 45, (15, 45))
+
+        with filter_row_2[1]:
+            overall_range = st.slider("Overall range", 40, 99, (40, 99))
+
+        with st.expander("More filters"):
+            nationality_choice = st.multiselect(
+                "Nationality",
+                sorted(players["nationality_name"].dropna().unique().tolist()),
+            )
+
+        if season_choice == "Latest season only":
+            map_df = latest.dropna(subset=["map_x", "map_y"]).copy()
+        else:
+            map_df = players[
+                players["season_label"].eq(season_choice)
+            ].dropna(subset=["map_x", "map_y"]).copy()
+
+        if quick_filter == "Wonderkids":
+            map_df = map_df[
+                pd.to_numeric(map_df["age"], errors="coerce").le(21)
+                & pd.to_numeric(map_df["potential"], errors="coerce").ge(82)
+            ]
+        elif quick_filter == "Elite creators":
+            map_df = map_df[pd.to_numeric(map_df["passing"], errors="coerce").ge(82)]
+        elif quick_filter == "Physical monsters":
+            map_df = map_df[pd.to_numeric(map_df["physic"], errors="coerce").ge(85)]
+        elif quick_filter == "Playmakers":
+            map_df = map_df[
+                pd.to_numeric(map_df["passing"], errors="coerce").ge(78)
+                & pd.to_numeric(map_df["dribbling"], errors="coerce").ge(78)
+            ]
+
+        if position_choice != "All":
+            map_df = map_df[
+                map_df["player_positions"].map(broad_position_group).eq(position_choice)
+            ]
+
+        if archetype_choice != "All":
+            map_df = map_df[map_df["archetype_name"].eq(archetype_choice)]
+
+        map_df = map_df[
+            pd.to_numeric(map_df["age"], errors="coerce").between(age_range[0], age_range[1])
+            & pd.to_numeric(map_df["overall"], errors="coerce").between(overall_range[0], overall_range[1])
+        ]
+
+        if nationality_choice:
+            map_df = map_df[map_df["nationality_name"].isin(nationality_choice)]
+
+        map_df = map_df.sort_values("overall", ascending=False)
+
+        if len(map_df) > 500:
+            max_points = st.slider(
+                "Max players shown",
+                500,
+                min(10000, len(map_df)),
+                min(2500, len(map_df)),
+                500,
+            )
+            map_df = map_df.head(max_points)
+
+        st.caption(f"Showing {len(map_df):,} player-seasons.")
+
+        if map_df.empty:
+            st.warning("No players match these filters. Try widening them.")
+        else:
+            hover_fields = [
+                "short_name", "club_name", "nationality_name",
+                "player_positions", "overall", "age", "archetype_name",
+            ]
+
+            fig = px.scatter(
+                map_df,
+                x="map_x",
+                y="map_y",
+                color="archetype_name" if "archetype_name" in map_df else None,
+                custom_data=["player_season_id"] + hover_fields,
+                title="Football DNA landscape",
+                labels={"map_x": "DNA axis 1", "map_y": "DNA axis 2"},
+            )
+
+            fig.update_traces(
+                hovertemplate=(
+                    "<b>%{customdata[1]}</b><br>"
+                    "%{customdata[2]} · %{customdata[3]}<br>"
+                    "%{customdata[4]} · Overall %{customdata[5]} · Age %{customdata[6]}<br>"
+                    "%{customdata[7]}"
+                    "<extra></extra>"
+                )
+            )
+
+            fig.update_layout(
+                template="plotly_dark",
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                height=700,
+            )
+
+            selection_event = st.plotly_chart(
+                fig,
+                width="stretch",
+                on_select="rerun",
+                selection_mode="points",
+                key="dna_map_chart",
+            )
+
+            selected_points = []
+
+            if selection_event and selection_event.get("selection"):
+                selected_points = selection_event["selection"].get("points", [])
+
+            if selected_points:
+                selected_ids = [
+                    point["customdata"][0]
+                    for point in selected_points
+                    if point.get("customdata")
+                ]
+
+                selected_rows = map_df[map_df["player_season_id"].isin(selected_ids)]
+
+                if not selected_rows.empty:
+                    st.subheader("Selected")
+                    player_cards(selected_rows, max_cards=len(selected_rows), key_prefix="dnamap")
+            else:
+                st.caption("Click a point above to see who it is.")
+
+    with network_tab:
+        st.markdown(
+            "<p class='ewc-hint'>Pick a player to see their football DNA neighbourhood -- "
+            "closest matches radiating outward, and each of those matches' own closest "
+            "matches one ring further out. Click any node to recentre the map on them.</p>",
+            unsafe_allow_html=True,
         )
 
-        fig.update_layout(
-            template="plotly_dark",
-            paper_bgcolor="rgba(0,0,0,0)",
-            plot_bgcolor="rgba(0,0,0,0)",
-            height=700,
+        NETWORK_CENTER_KEY = "dna_network_center_select"
+        PENDING_NETWORK_CENTER_KEY = "_pending_dna_network_center"
+
+        if PENDING_NETWORK_CENTER_KEY in st.session_state:
+            st.session_state[NETWORK_CENTER_KEY] = st.session_state.pop(PENDING_NETWORK_CENTER_KEY)
+
+        network_pool = latest.dropna(subset=emb_cols).copy()
+        network_options = (
+            network_pool.sort_values("overall", ascending=False)["display_name"]
+            .head(3000)
+            .tolist()
+        )
+        default_index = next(
+            (i for i, name in enumerate(network_options) if "L. Messi" in name),
+            0,
         )
 
-        selection_event = st.plotly_chart(
-            fig,
+        center_display_name = st.selectbox(
+            "Center player",
+            network_options,
+            index=default_index,
+            key=NETWORK_CENTER_KEY,
+        )
+
+        center_row = network_pool.loc[
+            network_pool["display_name"].eq(center_display_name)
+        ].iloc[0]
+
+        graph = build_dna_network(center_row, network_pool, emb_cols)
+        network_fig = build_network_figure(graph, center_row["name_key"])
+
+        st.caption(
+            f"{graph.number_of_nodes() - 1} players in {clean_text(center_row.get('short_name'))}'s "
+            "immediate football DNA neighbourhood."
+        )
+
+        network_selection = st.plotly_chart(
+            network_fig,
             width="stretch",
             on_select="rerun",
             selection_mode="points",
-            key="dna_map_chart",
+            key="dna_network_chart",
         )
 
-        selected_points = []
+        if network_selection and network_selection.get("selection"):
+            network_points = network_selection["selection"].get("points", [])
 
-        if selection_event and selection_event.get("selection"):
-            selected_points = selection_event["selection"].get("points", [])
+            if network_points:
+                clicked_customdata = network_points[0].get("customdata") or []
 
-        if selected_points:
-            selected_ids = [
-                point["customdata"][0]
-                for point in selected_points
-                if point.get("customdata")
-            ]
+                if len(clicked_customdata) > 7:
+                    clicked_display_name = clicked_customdata[7]
 
-            selected_rows = map_df[map_df["player_season_id"].isin(selected_ids)]
-
-            if not selected_rows.empty:
-                st.subheader("Selected")
-                player_cards(selected_rows, max_cards=len(selected_rows), key_prefix="dnamap")
-        else:
-            st.caption("Click a point above to see who it is.")
+                    if clicked_display_name and clicked_display_name != center_display_name:
+                        st.session_state[PENDING_NETWORK_CENTER_KEY] = clicked_display_name
+                        st.rerun()
 
 elif page == "Legend Score":
     st.header("Prototype Legend Style Score")
