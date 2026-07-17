@@ -12,7 +12,7 @@ import plotly.graph_objects as go
 import streamlit as st
 from sklearn.metrics.pairwise import cosine_similarity
 
-from components import clean_text, dna_pathway, hero, load_css, metrics_grid, player_cards
+from components import clean_text, dna_pathway, hero, load_css, metrics_grid, player_cards, sidebar_stats
 
 ROOT = Path(__file__).resolve().parents[1]
 PROCESSED = ROOT / "data" / "processed"
@@ -605,18 +605,18 @@ with st.sidebar:
     st.markdown("---")
     st.success("Autoencoder embeddings live")
     st.caption("Trained on FIFA attributes + FBRef performance data across 10 FIFA editions.")
+    sidebar_stats([
+        ("Player-seasons", f"{len(players):,}"),
+        ("DNA dimensions", str(len(emb_cols))),
+        ("Archetypes", f"{players['archetype_id'].nunique() if 'archetype_id' in players.columns else 0}"),
+        ("Players", f"{players['name_key'].nunique():,}"),
+        ("Countries", f"{players['nationality_name'].nunique():,}"),
+        ("Clubs", f"{players['club_name'].nunique():,}"),
+        ("DNA comparisons", f"{math.comb(len(players), 2) / 1_000_000:.0f}M+"),
+        ("FIFA editions", f"{players['season_label'].nunique()}"),
+    ])
 
 hero()
-metrics_grid([
-    ("Player-seasons", f"{len(players):,}", "Historical + current records"),
-    ("DNA dimensions", str(len(emb_cols)), "Compressed profile space"),
-    ("Archetypes", f"{players['archetype_id'].nunique() if 'archetype_id' in players.columns else 0}", "Profile clusters"),
-    ("Latest player pool", f"{players['name_key'].nunique():,}", "Unique players"),
-    ("Countries", f"{players['nationality_name'].nunique():,}", "Nations on the map"),
-    ("Clubs", f"{players['club_name'].nunique():,}", "Clubs represented"),
-    ("DNA comparisons", f"{math.comb(len(players), 2) / 1_000_000:.0f}M+", "Possible player-pairs"),
-    ("FIFA editions", f"{players['season_label'].nunique()}", "Seasons of data"),
-])
 
 players = players.copy()
 latest = players.sort_values("season_year").groupby("name_key", as_index=False).tail(1).copy()
@@ -689,7 +689,6 @@ hook_questions = [
     ("Can anyone replace Lionel Messi?", "player", "L. Messi", "Current replacements"),
     ("Who is the next Kevin De Bruyne?", "player", "K. De Bruyne", "Young successors"),
     ("What type of midfielder is Jude Bellingham?", "player", "J. Bellingham", "All similar players"),
-    ("Which players share Ronaldinho's DNA?", "player", "Ronaldinho", "Historical lookalikes"),
     ("How similar is Erling Haaland to Ronaldo?", "compare", "Haaland", "Cristiano Ronaldo"),
 ]
 

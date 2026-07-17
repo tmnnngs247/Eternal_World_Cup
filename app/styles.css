@@ -48,33 +48,53 @@ p, li, label, span, div {
 }
 
 .ewc-hero {
-  padding: 3.4rem 3rem;
+  padding: 0;
   border: 1px solid var(--ewc-border);
   border-radius: 2rem;
+  overflow: hidden;
   background: linear-gradient(135deg, rgba(35,58,87,.92), rgba(41,33,64,.92));
   box-shadow: 0 24px 80px rgba(0,0,0,.28);
 }
 
-.ewc-hero h1 {
+.ewc-hero-image-wrap {
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  position: relative;
+  overflow: hidden;
+}
+
+.ewc-hero-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 22%;
+}
+
+.ewc-hero-image-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(11,16,32,0) 55%, rgba(11,16,32,.96) 100%);
+}
+
+.ewc-hero-content {
+  padding: 2.2rem 3rem 3rem;
+}
+
+.ewc-hero-content h1 {
   font-size: clamp(3rem, 6vw, 5rem);
   margin: 0 0 1.3rem 0;
 }
 
-.ewc-hero p {
+.ewc-hero-content p {
   color: var(--ewc-muted);
   font-size: 1.18rem;
   line-height: 1.65;
   max-width: 960px;
+  margin: 0;
 }
 
-.ewc-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .7rem;
-  margin-top: 1.2rem;
-}
-
-.ewc-badge,
 .pill {
   display: inline-flex;
   padding: .55rem 1rem;
@@ -119,6 +139,36 @@ p, li, label, span, div {
   color: var(--ewc-soft);
   margin-top: .55rem;
   font-size: .92rem;
+}
+
+.ewc-sidebar-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .5rem .6rem;
+  margin: .9rem 0 .2rem;
+}
+
+.ewc-sidebar-stat {
+  padding: .55rem .6rem;
+  border: 1px solid var(--ewc-border);
+  border-radius: .7rem;
+  background: rgba(255,255,255,.04);
+}
+
+.ewc-sidebar-stat .value {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--ewc-text) !important;
+  line-height: 1.15;
+}
+
+.ewc-sidebar-stat .label {
+  font-size: .62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--ewc-soft) !important;
+  margin-top: .2rem;
 }
 
 .ewc-callout,
@@ -547,8 +597,8 @@ ul[role="listbox"] li * {
     grid-template-columns: 1fr;
   }
 
-  .ewc-hero {
-    padding: 2rem;
+  .ewc-hero-content {
+    padding: 1.5rem;
   }
 }
 

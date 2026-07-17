@@ -133,27 +133,24 @@ HERO_IMAGE_PATH = ROOT / "assets" / "football_genome_header.jpg"
 def hero() -> None:
     hero_image_uri = image_data_uri(str(HERO_IMAGE_PATH))
 
-    hero_style = (
-        "background-image: linear-gradient(rgba(7,10,21,.95), rgba(7,10,21,.95)), "
-        f"url('{hero_image_uri}'); background-size: cover; background-position: center 12%;"
+    hero_image_html = (
+        f'<div class="ewc-hero-image-wrap"><img class="ewc-hero-image" '
+        f'src="{html.escape(hero_image_uri, quote=True)}" alt="" loading="lazy"></div>'
         if hero_image_uri
         else ""
     )
 
     render_html(
         f"""
-        <section class="ewc-hero" style="{hero_style}">
-          <h1>The Football Genome</h1>
-          <p>
-            Every footballer has a DNA profile. Discover who shares it --
-            compare players across generations, uncover future successors,
-            and see how football's greatest are connected.
-          </p>
-          <div class="ewc-badges">
-            <span class="ewc-badge">Football DNA</span>
-            <span class="ewc-badge">Future Successors</span>
-            <span class="ewc-badge">Player Evolution</span>
-            <span class="ewc-badge">Talent Identification</span>
+        <section class="ewc-hero">
+          {hero_image_html}
+          <div class="ewc-hero-content">
+            <h1>The Football Genome</h1>
+            <p>
+              Every footballer has a DNA profile. Discover who shares it --
+              compare players across generations, uncover future successors,
+              and see how football's greatest are connected.
+            </p>
           </div>
         </section>
         """
@@ -182,6 +179,23 @@ def metrics_grid(metrics: list[tuple[str, str, str]]) -> None:
 
     st.markdown(
         grid_html,
+        unsafe_allow_html=True,
+    )
+
+
+def sidebar_stats(stats: list[tuple[str, str]]) -> None:
+    """A compact 2-column stat list sized for the sidebar's narrow width --
+    metrics_grid's 4-column cards don't fit there."""
+    items = "".join(
+        '<div class="ewc-sidebar-stat">'
+        f'<div class="value">{html.escape(str(value))}</div>'
+        f'<div class="label">{html.escape(str(label))}</div>'
+        "</div>"
+        for label, value in stats
+    )
+
+    st.markdown(
+        f'<div class="ewc-sidebar-stats">{items}</div>',
         unsafe_allow_html=True,
     )
 
