@@ -1305,7 +1305,38 @@ elif page == "Archetypes":
             "player_count", ascending=False
         )["archetype_name"].tolist()
 
-        selected_archetype_name = st.selectbox("Choose an archetype", archetype_order)
+        ARCHETYPE_SELECT_KEY = "archetypes_page_select"
+
+        if ARCHETYPE_SELECT_KEY not in st.session_state:
+            st.session_state[ARCHETYPE_SELECT_KEY] = archetype_order[0]
+
+        st.markdown(
+            f"<p class='ewc-hint'>There are {len(archetype_order)} football DNA archetypes in this "
+            "dataset -- every profile in football boils down to one of these. Pick one to explore its "
+            "all-time greats, modern examples and young prospects.</p>",
+            unsafe_allow_html=True,
+        )
+
+        archetype_tile_cols = st.columns(4)
+
+        for i, tile_name in enumerate(archetype_order):
+            tile_count = int(
+                archetypes.loc[archetypes["archetype_name"].eq(tile_name), "player_count"].iloc[0]
+            )
+
+            with archetype_tile_cols[i % 4]:
+                if st.button(
+                    f"{tile_name} ({tile_count:,})",
+                    key=f"archetype_tile_{i}",
+                    width="stretch",
+                ):
+                    st.session_state[ARCHETYPE_SELECT_KEY] = tile_name
+
+        selected_archetype_name = st.selectbox(
+            "Or jump directly to an archetype",
+            archetype_order,
+            key=ARCHETYPE_SELECT_KEY,
+        )
 
         archetype_row = archetypes.loc[
             archetypes["archetype_name"].eq(selected_archetype_name)
@@ -1374,7 +1405,18 @@ elif page == "Archetypes":
         max_season = pd.to_numeric(players["season_year"], errors="coerce").max()
         recent_cutoff = max_season - 3
 
-        st.subheader("Best modern examples")
+        st.subheader("All-time greats")
+        st.caption("The highest peak overall rating ever recorded for this archetype.")
+
+        all_time_examples = (
+            cluster_players.sort_values("overall", ascending=False)
+            .drop_duplicates("name_key")
+            .head(5)
+        )
+
+        player_cards(all_time_examples, max_cards=5, key_prefix="archetype_alltime")
+
+        st.subheader("Modern examples")
         st.caption(f"Peak season-{int(recent_cutoff)} onward, by overall rating.")
 
         best_pool = cluster_players[
@@ -1389,7 +1431,7 @@ elif page == "Archetypes":
 
         player_cards(best_examples, max_cards=5, key_prefix="archetype_best")
 
-        st.subheader("Emerging examples")
+        st.subheader("Young prospects")
         st.caption(f"FIFA {int(max_season) - 2000}, age 22 or under, by potential.")
 
         emerging_pool = cluster_players[
