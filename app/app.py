@@ -177,6 +177,29 @@ def add_similarity_reasons(res: pd.DataFrame, query: pd.Series) -> pd.DataFrame:
     return res
 
 
+def broad_position_group(position_string: object) -> str:
+    positions = str(position_string or "").upper()
+
+    if "GK" in positions:
+        return "Goalkeeper"
+
+    if any(position in positions for position in ["CB", "LB", "RB", "LWB", "RWB"]):
+        return "Defender"
+
+    if any(position in positions for position in ["CDM", "CM", "CAM", "LM", "RM"]):
+        return "Midfielder"
+
+    if any(position in positions for position in ["LW", "RW", "CF", "ST"]):
+        return "Forward"
+
+    return "Other"
+
+
+def primary_position(position_string: object) -> str:
+    positions = str(position_string or "")
+    return positions.split(",")[0].strip().upper()
+
+
 players = load_players()
 archetypes = load_archetypes()
 scores = load_scores()
@@ -246,6 +269,26 @@ if page == "Successor Finder":
             st.session_state[REFERENCE_KEY] = matches.iloc[0]
 
         st.session_state[SEARCH_MODE_KEY] = mode
+
+    st.markdown("#### Popular searches")
+
+    popular_searches = [
+        ("Lionel Messi", "L. Messi"),
+        ("Cristiano Ronaldo", "Cristiano Ronaldo"),
+        ("Kevin De Bruyne", "K. De Bruyne"),
+        ("Jude Bellingham", "J. Bellingham"),
+        ("Lamine Yamal", "Lamine Yamal"),
+        ("Erling Haaland", "Haaland"),
+        ("Virgil van Dijk", "van Dijk"),
+        ("Bukayo Saka", "B. Saka"),
+    ]
+
+    popular_cols = st.columns(4)
+
+    for i, (label, target) in enumerate(popular_searches):
+        with popular_cols[i % 4]:
+            if st.button(label, key=f"popular_search_{i}", width="stretch"):
+                jump_to_player(target, "Young successors")
 
     st.markdown("#### Start here")
 
@@ -344,27 +387,6 @@ if page == "Successor Finder":
         "</div>",
         unsafe_allow_html=True,
     )
-
-    def broad_position_group(position_string: object) -> str:
-        positions = str(position_string or "").upper()
-
-        if "GK" in positions:
-            return "Goalkeeper"
-
-        if any(position in positions for position in ["CB", "LB", "RB", "LWB", "RWB"]):
-            return "Defender"
-
-        if any(position in positions for position in ["CDM", "CM", "CAM", "LM", "RM"]):
-            return "Midfielder"
-
-        if any(position in positions for position in ["LW", "RW", "CF", "ST"]):
-            return "Forward"
-
-        return "Other"
-
-    def primary_position(position_string: object) -> str:
-        positions = str(position_string or "")
-        return positions.split(",")[0].strip().upper()
 
     pool = players.copy()
 
@@ -789,32 +811,156 @@ elif page == "Pathways":
             )
 
 elif page == "DNA Map":
-    st.header("Football DNA map")
+    st.header("Explore football's DNA landscape")
 
-    plot_df = latest.dropna(subset=[emb_cols[0], emb_cols[1]]).copy()
-    max_points = st.slider("Number of players", 500, min(10000, len(plot_df)), 2500, 500)
-    plot_df = plot_df.sort_values("overall", ascending=False).head(max_points)
-
-    fig = px.scatter(
-        plot_df,
-        x=emb_cols[0],
-        y=emb_cols[1],
-        color="archetype_name" if "archetype_name" in plot_df else None,
-        hover_data=[
-            "short_name", "club_name", "nationality_name",
-            "overall", "age", "player_positions",
-        ],
-        title="Latest player-seasons projected onto first two DNA dimensions",
+    st.markdown(
+        "<div class='ewc-callout'>Filter by position, age, overall, archetype, nationality "
+        "or season -- or jump straight to a preset like wonderkids or physical monsters. "
+        "Click a point on the map to see who it is.</div>",
+        unsafe_allow_html=True,
     )
 
-    fig.update_layout(
-        template="plotly_dark",
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        height=700,
+    season_options = ["Latest season only"] + sorted(
+        players["season_label"].dropna().unique().tolist(),
+        reverse=True,
     )
 
-    st.plotly_chart(fig, width="stretch")
+    quick_filter = st.selectbox(
+        "Quick filter",
+        ["None", "Wonderkids", "Elite creators", "Physical monsters", "Playmakers"],
+    )
+
+    filter_row_1 = st.columns(3)
+
+    with filter_row_1[0]:
+        season_choice = st.selectbox("Season", season_options)
+
+    with filter_row_1[1]:
+        position_choice = st.selectbox(
+            "Position",
+            ["All", "Goalkeeper", "Defender", "Midfielder", "Forward"],
+        )
+
+    with filter_row_1[2]:
+        archetype_choice = st.selectbox(
+            "Archetype",
+            ["All"] + sorted(players["archetype_name"].dropna().unique().tolist()),
+        )
+
+    filter_row_2 = st.columns(2)
+
+    with filter_row_2[0]:
+        age_range = st.slider("Age range", 15, 45, (15, 45))
+
+    with filter_row_2[1]:
+        overall_range = st.slider("Overall range", 40, 99, (40, 99))
+
+    with st.expander("More filters"):
+        nationality_choice = st.multiselect(
+            "Nationality",
+            sorted(players["nationality_name"].dropna().unique().tolist()),
+        )
+
+    if season_choice == "Latest season only":
+        map_df = latest.dropna(subset=[emb_cols[0], emb_cols[1]]).copy()
+    else:
+        map_df = players[
+            players["season_label"].eq(season_choice)
+        ].dropna(subset=[emb_cols[0], emb_cols[1]]).copy()
+
+    if quick_filter == "Wonderkids":
+        map_df = map_df[
+            pd.to_numeric(map_df["age"], errors="coerce").le(21)
+            & pd.to_numeric(map_df["potential"], errors="coerce").ge(82)
+        ]
+    elif quick_filter == "Elite creators":
+        map_df = map_df[pd.to_numeric(map_df["passing"], errors="coerce").ge(82)]
+    elif quick_filter == "Physical monsters":
+        map_df = map_df[pd.to_numeric(map_df["physic"], errors="coerce").ge(85)]
+    elif quick_filter == "Playmakers":
+        map_df = map_df[
+            pd.to_numeric(map_df["passing"], errors="coerce").ge(78)
+            & pd.to_numeric(map_df["dribbling"], errors="coerce").ge(78)
+        ]
+
+    if position_choice != "All":
+        map_df = map_df[
+            map_df["player_positions"].map(broad_position_group).eq(position_choice)
+        ]
+
+    if archetype_choice != "All":
+        map_df = map_df[map_df["archetype_name"].eq(archetype_choice)]
+
+    map_df = map_df[
+        pd.to_numeric(map_df["age"], errors="coerce").between(age_range[0], age_range[1])
+        & pd.to_numeric(map_df["overall"], errors="coerce").between(overall_range[0], overall_range[1])
+    ]
+
+    if nationality_choice:
+        map_df = map_df[map_df["nationality_name"].isin(nationality_choice)]
+
+    max_points = st.slider(
+        "Max players shown",
+        500,
+        min(10000, max(500, len(map_df))),
+        min(2500, max(500, len(map_df))),
+        500,
+    )
+
+    map_df = map_df.sort_values("overall", ascending=False).head(max_points)
+
+    st.caption(f"Showing {len(map_df):,} player-seasons.")
+
+    if map_df.empty:
+        st.warning("No players match these filters. Try widening them.")
+    else:
+        fig = px.scatter(
+            map_df,
+            x=emb_cols[0],
+            y=emb_cols[1],
+            color="archetype_name" if "archetype_name" in map_df else None,
+            custom_data=["player_season_id"],
+            hover_data=[
+                "short_name", "club_name", "nationality_name",
+                "overall", "age", "player_positions",
+            ],
+            title="Football DNA landscape",
+        )
+
+        fig.update_layout(
+            template="plotly_dark",
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            height=700,
+        )
+
+        selection_event = st.plotly_chart(
+            fig,
+            width="stretch",
+            on_select="rerun",
+            selection_mode="points",
+            key="dna_map_chart",
+        )
+
+        selected_points = []
+
+        if selection_event and selection_event.get("selection"):
+            selected_points = selection_event["selection"].get("points", [])
+
+        if selected_points:
+            selected_ids = [
+                point["customdata"][0]
+                for point in selected_points
+                if point.get("customdata")
+            ]
+
+            selected_rows = map_df[map_df["player_season_id"].isin(selected_ids)]
+
+            if not selected_rows.empty:
+                st.subheader("Selected")
+                player_cards(selected_rows, max_cards=len(selected_rows))
+        else:
+            st.caption("Click a point above to see who it is.")
 
 elif page == "Legend Score":
     st.header("Prototype Legend Style Score")
