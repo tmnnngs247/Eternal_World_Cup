@@ -603,8 +603,8 @@ with st.sidebar:
         label_visibility="collapsed",
     )
     st.markdown("---")
-    st.success("Autoencoder embeddings live")
-    st.caption("Trained on FIFA attributes + FBRef performance data across 10 FIFA editions.")
+    st.success("Football DNA engine live")
+    st.caption("Built using FIFA attributes and FBRef data across 10 FIFA editions.")
     sidebar_stats([
         ("Player-seasons", f"{len(players):,}"),
         ("DNA dimensions", str(len(emb_cols))),
@@ -612,7 +612,7 @@ with st.sidebar:
         ("Players", f"{players['name_key'].nunique():,}"),
         ("Countries", f"{players['nationality_name'].nunique():,}"),
         ("Clubs", f"{players['club_name'].nunique():,}"),
-        ("DNA comparisons", f"{math.comb(len(players), 2) / 1_000_000:.0f}M+"),
+        ("Player comparisons", f"{math.comb(len(players), 2) / 1_000_000:.0f}M+"),
         ("FIFA editions", f"{players['season_label'].nunique()}"),
     ])
 
@@ -683,7 +683,7 @@ def jump_to_compare(name_a_substring: str, name_b_substring: str) -> None:
     st.rerun()
 
 
-st.markdown("#### Try these questions")
+st.markdown("#### Start exploring...")
 
 hook_questions = [
     ("Can anyone replace Lionel Messi?", "player", "L. Messi", "Current replacements"),

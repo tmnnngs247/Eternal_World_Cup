@@ -145,11 +145,10 @@ def hero() -> None:
         <section class="ewc-hero">
           {hero_image_html}
           <div class="ewc-hero-content">
-            <h1>The Football Genome</h1>
+            <h1>Every footballer has a DNA profile.</h1>
             <p>
-              Every footballer has a DNA profile. Discover who shares it --
-              compare players across generations, uncover future successors,
-              and see how football's greatest are connected.
+              Compare players across generations, discover future
+              successors and uncover football's hidden connections.
             </p>
           </div>
         </section>
