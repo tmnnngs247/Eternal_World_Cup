@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+from sklearn.decomposition import PCA
 
 ROOT = Path(__file__).resolve().parents[1]
 PROCESSED = ROOT / "data" / "processed"
@@ -215,6 +216,8 @@ KEEP_COLS = [
     "interceptions",
     "vision",
     "standing_tackle",
+    "map_x",
+    "map_y",
 ]
 
 
@@ -250,6 +253,15 @@ def main() -> None:
         for column in players.columns
         if column.startswith("emb_")
     ]
+
+    # A 2D projection for the DNA Map, fit once across the full embedding
+    # space rather than reusing two arbitrary raw dimensions (emb_00/emb_01),
+    # which weren't chosen for being the most separating or interpretable.
+    pca_coords = PCA(n_components=2, random_state=42).fit_transform(
+        players[emb_cols].to_numpy(float)
+    )
+    players["map_x"] = pca_coords[:, 0]
+    players["map_y"] = pca_coords[:, 1]
 
     keep = (
         [column for column in KEEP_COLS if column in players.columns]

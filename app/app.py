@@ -1118,11 +1118,11 @@ elif page == "DNA Map":
         )
 
     if season_choice == "Latest season only":
-        map_df = latest.dropna(subset=[emb_cols[0], emb_cols[1]]).copy()
+        map_df = latest.dropna(subset=["map_x", "map_y"]).copy()
     else:
         map_df = players[
             players["season_label"].eq(season_choice)
-        ].dropna(subset=[emb_cols[0], emb_cols[1]]).copy()
+        ].dropna(subset=["map_x", "map_y"]).copy()
 
     if quick_filter == "Wonderkids":
         map_df = map_df[
@@ -1179,11 +1179,12 @@ elif page == "DNA Map":
 
         fig = px.scatter(
             map_df,
-            x=emb_cols[0],
-            y=emb_cols[1],
+            x="map_x",
+            y="map_y",
             color="archetype_name" if "archetype_name" in map_df else None,
             custom_data=["player_season_id"] + hover_fields,
             title="Football DNA landscape",
+            labels={"map_x": "DNA axis 1", "map_y": "DNA axis 2"},
         )
 
         fig.update_traces(
