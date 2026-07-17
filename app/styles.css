@@ -346,6 +346,13 @@ p, li, label, span, div {
   color: var(--ewc-soft) !important;
 }
 
+.ewc-score-context {
+  font-size: .78rem;
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--ewc-accent) !important;
+}
+
 .ewc-archetype-chip {
   display: inline-flex;
   margin-top: .8rem;

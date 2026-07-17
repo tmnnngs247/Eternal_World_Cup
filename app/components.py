@@ -403,8 +403,16 @@ def _build_card_html(row: pd.Series, score_label: str) -> str:
             f"<strong>{successor_score_value:.1f}/10</strong></div>"
         )
 
+    match_context = clean_text(row.get("match_context"))
+    match_context_html = (
+        f'<div class="ewc-score-context">{html.escape(match_context)}</div>'
+        if match_context
+        else ""
+    )
+
     score_html = (
         '<div class="ewc-score-wrap">'
+        f"{match_context_html}"
         f'<div class="ewc-score-label">{html.escape(score_label)}</div>'
         f'<div class="ewc-score">{score}</div>'
         "</div>"

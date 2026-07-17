@@ -83,6 +83,15 @@ SEARCH_MODE_LABELS = {
     "All similar players": "Unlimited search",
 }
 
+# Short context line shown above the DNA Match score on each result card, so
+# the score reads with its search intent rather than as a bare percentage.
+SEARCH_MODE_CONTEXT_LABELS = {
+    "Young successors": "Modern Successor",
+    "Current replacements": "Current Replacement",
+    "Historical lookalikes": "Historical Match",
+    "All similar players": "",
+}
+
 # Short display labels for the compact per-trait score breakdown.
 TRAIT_BREAKDOWN_LABELS = {
     "passing": "Passing",
@@ -700,6 +709,7 @@ if page == "Successor Finder":
             )
 
             res = add_similarity_reasons(res, query)
+            res["match_context"] = SEARCH_MODE_CONTEXT_LABELS.get(search_mode, "")
 
         st.caption(
             f"Showing {SEARCH_MODE_LABELS.get(search_mode, search_mode).lower()} using "
