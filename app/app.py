@@ -480,9 +480,9 @@ if page == "Successor Finder":
                 jump_to_player(target, mode)
 
     st.markdown(
-        "<div class='ewc-callout'>Pick a reference player-season below, or use one of the "
+        "<p class='ewc-hint'>Pick a reference player-season below, or use one of the "
         "questions above. Choose whether you want young successors, current replacements, "
-        "historical lookalikes or an unrestricted DNA search.</div>",
+        "historical lookalikes or an unrestricted DNA search.</p>",
         unsafe_allow_html=True,
     )
 
@@ -760,10 +760,10 @@ elif page == "Evolution":
     st.header("How a player's football DNA has evolved")
 
     st.markdown(
-        "<div class='ewc-callout'>Track a single player across FIFA editions to see how "
+        "<p class='ewc-hint'>Track a single player across FIFA editions to see how "
         "their overall rating, attributes, archetype and football DNA have shifted over "
         "time. Some editions may be missing for a player if they weren't in the dataset "
-        "that season.</div>",
+        "that season.</p>",
         unsafe_allow_html=True,
     )
 
@@ -969,10 +969,10 @@ elif page == "Pathways":
     st.header("Football DNA succession pathways")
 
     st.markdown(
-        "<div class='ewc-callout'>Start from a player and follow the chain: each step finds "
+        "<p class='ewc-hint'>Start from a player and follow the chain: each step finds "
         "the closest football DNA match among today's players who are meaningfully younger "
         "than the step before it -- tracing a generational lineage rather than a single list "
-        "of matches.</div>",
+        "of matches.</p>",
         unsafe_allow_html=True,
     )
 
@@ -1070,9 +1070,9 @@ elif page == "DNA Map":
     st.header("Explore football's DNA landscape")
 
     st.markdown(
-        "<div class='ewc-callout'>Filter by position, age, overall, archetype, nationality "
+        "<p class='ewc-hint'>Filter by position, age, overall, archetype, nationality "
         "or season -- or jump straight to a preset like wonderkids or physical monsters. "
-        "Click a point on the map to see who it is.</div>",
+        "Click a point on the map to see who it is.</p>",
         unsafe_allow_html=True,
     )
 
@@ -1232,9 +1232,9 @@ elif page == "DNA Map":
 elif page == "Legend Score":
     st.header("Prototype Legend Style Score")
     st.markdown(
-        "<div class='ewc-callout'>This is a narrative ranking, not a prediction model. "
+        "<p class='ewc-hint'>This is a narrative ranking, not a prediction model. "
         "It combines current quality, potential, age curve, reputation and World Cup metadata "
-        "where available.</div>",
+        "where available.</p>",
         unsafe_allow_html=True,
     )
 

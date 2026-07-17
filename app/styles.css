@@ -131,6 +131,16 @@ p, li, label, span, div {
   line-height: 1.6;
 }
 
+/* Plain-text page intro/disclaimer -- deliberately un-boxed so it doesn't
+   compete for attention with callouts that carry actual computed data. */
+.ewc-hint {
+  color: var(--ewc-soft) !important;
+  line-height: 1.6;
+  font-size: .95rem;
+  margin: -.4rem 0 1.1rem 0;
+  max-width: 760px;
+}
+
 .ewc-reference-callout {
   line-height: 1.5;
 }
