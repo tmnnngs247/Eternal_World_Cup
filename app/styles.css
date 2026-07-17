@@ -230,6 +230,46 @@ p, li, label, span, div {
   margin-top: .5rem;
 }
 
+.ewc-journey {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .1rem;
+  max-width: 420px;
+  margin: 1rem auto 1.6rem;
+}
+
+.ewc-journey-step {
+  width: 100%;
+  text-align: center;
+  border: 1px solid var(--ewc-border);
+  border-radius: 1rem;
+  background: rgba(15, 23, 42, .72);
+  padding: .85rem 1.2rem;
+}
+
+.ewc-journey-season {
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .09em;
+  color: var(--ewc-soft) !important;
+}
+
+.ewc-journey-archetype {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #F8FAFC !important;
+  margin-top: .2rem;
+}
+
+.ewc-journey-arrow {
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--ewc-accent);
+  margin: .1rem 0;
+}
+
 .ewc-player-card,
 .player-card {
   border: 1px solid var(--ewc-border);

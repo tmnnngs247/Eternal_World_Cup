@@ -942,14 +942,26 @@ elif page == "Evolution":
                 continue
 
             if current_archetype != previous_archetype:
-                archetype_journey.append(f"{row['season_label']}: {current_archetype}")
+                archetype_journey.append((row["season_label"], current_archetype))
                 previous_archetype = current_archetype
 
         if archetype_journey:
+            journey_steps_html = []
+
+            for i, (season_label, archetype_name) in enumerate(archetype_journey):
+                journey_steps_html.append(
+                    '<div class="ewc-journey-step">'
+                    f'<div class="ewc-journey-season">{html.escape(str(season_label))}</div>'
+                    f'<div class="ewc-journey-archetype">{html.escape(str(archetype_name))}</div>'
+                    "</div>"
+                )
+
+                if i < len(archetype_journey) - 1:
+                    journey_steps_html.append('<div class="ewc-journey-arrow">&darr;</div>')
+
+            st.subheader("Archetype journey")
             st.markdown(
-                "<div class='ewc-callout'>🧬 Archetype journey: "
-                + " &rarr; ".join(html.escape(step) for step in archetype_journey)
-                + "</div>",
+                '<div class="ewc-journey">' + "".join(journey_steps_html) + "</div>",
                 unsafe_allow_html=True,
             )
 
